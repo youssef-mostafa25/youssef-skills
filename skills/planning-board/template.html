@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- TITLE: two to four words naming THIS job. Not "Job: explainer". -->
+<title>Planning Board</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --paper:#f2f1ec; --panel:#fbfaf7; --sunk:#eceae2;
+    --ink:#191b19; --ink-2:#555b55; --ink-3:#7d837c;
+    --rule:#dcd8cd; --rule-2:#e7e4da;
+    --accent:#1f5f5b; --accent-wash:#e2eceb;
+
+    --open:#a33224;      --open-wash:#f8e9e6;
+    --plan:#6b4ea8;      --plan-wash:#ece7f6;
+    --appr:#1f5f5b;      --appr-wash:#e2eceb;
+    --fixed:#2c6e3f;     --fixed-wash:#e3efe6;
+    --partial:#8a5e00;   --partial-wash:#f8efdb;
+    --refuted:#42607f;   --refuted-wash:#e5ecf3;
+    --byd:#42607f;       --byd-wash:#e5ecf3;
+    --defer:#6b6250;     --defer-wash:#efebe0;
+    --out:#7a4f6b;       --out-wash:#f3e9f0;
+
+    --crit:#a33224; --high:#a85a1f; --med:#8a6a12; --low:#7d837c;
+
+    --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    color-scheme:light dark;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --paper:#111311; --panel:#191c19; --sunk:#202420;
+    --ink:#e9ece8; --ink-2:#aab0a9; --ink-3:#7f867e;
+    --rule:#2c312c; --rule-2:#232823;
+    --accent:#6fb8b1; --accent-wash:#14231f;
+
+    --open:#e8827a;      --open-wash:#2a1512;
+    --plan:#b49ce0;      --plan-wash:#1d1729;
+    --appr:#6fb8b1;      --appr-wash:#14231f;
+    --fixed:#6dbd85;     --fixed-wash:#12220f;
+    --partial:#dda944;   --partial-wash:#271d0c;
+    --refuted:#8badcc;   --refuted-wash:#151d25;
+    --byd:#8badcc;       --byd-wash:#151d25;
+    --defer:#bdb094;     --defer-wash:#221f16;
+    --out:#d7a3c5;       --out-wash:#261b23;
+
+    --crit:#e8827a; --high:#e0995f; --med:#d4b23f; --low:#8f958d;
+  }}
+  :root[data-theme="dark"]{
+    --paper:#111311; --panel:#191c19; --sunk:#202420;
+    --ink:#e9ece8; --ink-2:#aab0a9; --ink-3:#7f867e;
+    --rule:#2c312c; --rule-2:#232823;
+    --accent:#6fb8b1; --accent-wash:#14231f;
+
+    --open:#e8827a;      --open-wash:#2a1512;
+    --plan:#b49ce0;      --plan-wash:#1d1729;
+    --appr:#6fb8b1;      --appr-wash:#14231f;
+    --fixed:#6dbd85;     --fixed-wash:#12220f;
+    --partial:#dda944;   --partial-wash:#271d0c;
+    --refuted:#8badcc;   --refuted-wash:#151d25;
+    --byd:#8badcc;       --byd-wash:#151d25;
+    --defer:#bdb094;     --defer-wash:#221f16;
+    --out:#d7a3c5;       --out-wash:#261b23;
+
+    --crit:#e8827a; --high:#e0995f; --med:#d4b23f; --low:#8f958d;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+       font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  .wrap{max-width:1140px;margin:0 auto;padding-inline:16px;padding-block:32px 88px}
+
+  h1,h2,h3{font-family:var(--serif);margin:0;text-wrap:balance}
+  h1{font-size:clamp(28px,5.5vw,40px);font-weight:600;letter-spacing:-.02em;line-height:1.1}
+  h2{font-size:19px;font-weight:600;letter-spacing:-.01em}
+  h3{font-size:16px;font-weight:600}
+  p{margin:0 0 11px}
+  a{color:var(--accent)}
+  code{font-family:var(--mono);font-size:.85em;background:var(--sunk);padding:1px 5px;border-radius:3px;word-break:break-word}
+
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+
+  header.mast{border-bottom:2px solid var(--ink);padding-bottom:22px;display:flex;flex-wrap:wrap;gap:22px 34px;align-items:flex-end;justify-content:space-between}
+  .mast .sub{color:var(--ink-2);font-size:15px;max-width:60ch;margin-top:11px}
+  .mast .meta{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:14px;font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+  .mast .meta b{color:var(--ink-2);font-weight:500}
+
+  /* Tally — hand-maintained. Update it in the same turn as any status change. */
+  .tally{display:flex;gap:22px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+  .tally div{text-align:right}
+  .tally .n{display:block;font-family:var(--mono);font-size:25px;font-weight:700;line-height:1;letter-spacing:-.02em}
+  .tally .k{display:block;margin-top:6px;font-family:var(--mono);font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+  .tally .t-open .n{color:var(--open)}
+  .tally .t-plan .n{color:var(--plan)}
+  .tally .t-appr .n{color:var(--appr)}
+  .tally .t-fixed .n{color:var(--fixed)}
+  .tally .t-partial .n{color:var(--partial)}
+  .tally .t-defer .n{color:var(--defer)}
+  .tally .t-out .n{color:var(--out)}
+  .tally .t-refuted .n{color:var(--refuted)}
+
+  .tabs{display:flex;gap:2px;margin:26px 0 20px;border-bottom:1px solid var(--rule);overflow-x:auto}
+  .tab{appearance:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:12px 15px;font-family:var(--mono);font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);cursor:pointer;white-space:nowrap}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:-3px;border-radius:3px}
+  .tab .c{margin-left:7px;font-size:10.5px;color:var(--ink-3)}
+  .panel[hidden]{display:none}
+
+  .lede{max-width:70ch;color:var(--ink-2);font-size:14.5px;margin:0 0 22px}
+  .lede strong{color:var(--ink);font-weight:600}
+
+  .filters{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-bottom:20px}
+  .flabel{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-right:3px}
+  .chip{appearance:none;display:inline-flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--rule);border-radius:999px;padding:5px 12px 5px 9px;font-family:var(--mono);font-size:11px;color:var(--ink-2);cursor:pointer}
+  .chip:hover{color:var(--ink);border-color:var(--ink-3)}
+  .chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .chip[aria-pressed="true"]{background:var(--accent-wash);border-color:var(--accent);color:var(--ink)}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .dot.all{background:var(--ink-3)}
+  .dot.open{background:var(--open)} .dot.plan{background:var(--plan)}
+  .dot.appr{background:var(--appr)} .dot.fixed{background:var(--fixed)}
+  .dot.partial{background:var(--partial)} .dot.refuted{background:var(--refuted)}
+  .dot.byd{background:var(--byd)} .dot.defer{background:var(--defer)} .dot.out{background:var(--out)}
+
+  section.group{margin-bottom:30px}
+  section.group[hidden]{display:none}
+  .ghead{display:flex;align-items:baseline;gap:11px;margin-bottom:9px}
+  .ghead h2{font-size:16px}
+  .ghead .rule{flex:1;height:1px;background:var(--rule)}
+  .ghead .n{font-family:var(--mono);font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+
+  .tw{background:var(--panel);border:1px solid var(--rule);border-radius:7px;overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:760px}
+  thead th{background:var(--sunk);text-align:left;font-family:var(--mono);font-weight:500;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);padding:9px 13px;border-bottom:1px solid var(--rule);white-space:nowrap}
+  tbody tr{border-bottom:1px solid var(--rule-2)}
+  tbody tr:last-child{border-bottom:0}
+  tbody tr[hidden]{display:none}
+  td{padding:12px 13px;vertical-align:top}
+
+  td.id{font-family:var(--mono);font-size:11px;color:var(--ink-3);width:1%;white-space:nowrap;border-left:3px solid transparent;padding-left:11px;font-variant-numeric:tabular-nums}
+  td.id .src{display:block;margin-top:4px;color:var(--ink-3);font-size:10px}
+  tr.s-open td.id{border-left-color:var(--open)}
+  tr.s-plan td.id{border-left-color:var(--plan)}
+  tr.s-appr td.id{border-left-color:var(--appr)}
+  tr.s-fixed td.id{border-left-color:var(--fixed)}
+  tr.s-partial td.id{border-left-color:var(--partial)}
+  tr.s-refuted td.id{border-left-color:var(--refuted)}
+  tr.s-byd td.id{border-left-color:var(--byd)}
+  tr.s-defer td.id{border-left-color:var(--defer)}
+  tr.s-out td.id{border-left-color:var(--out)}
+
+  td.st{width:1%;white-space:nowrap}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-radius:4px;font-weight:500}
+  .pill.open{background:var(--open-wash);color:var(--open)}
+  .pill.plan{background:var(--plan-wash);color:var(--plan)}
+  .pill.appr{background:var(--appr-wash);color:var(--appr)}
+  .pill.fixed{background:var(--fixed-wash);color:var(--fixed)}
+  .pill.partial{background:var(--partial-wash);color:var(--partial)}
+  .pill.refuted{background:var(--refuted-wash);color:var(--refuted)}
+  .pill.byd{background:var(--byd-wash);color:var(--byd)}
+  .pill.defer{background:var(--defer-wash);color:var(--defer)}
+  .pill.out{background:var(--out-wash);color:var(--out)}
+
+  .sev{display:block;margin-top:6px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  .sev.crit{color:var(--crit)} .sev.high{color:var(--high)}
+  .sev.med{color:var(--med)} .sev.low{color:var(--low)}
+  .sev.was{color:var(--ink-3);text-decoration:line-through}
+
+  td.loc{font-family:var(--mono);font-size:11px;line-height:1.5;width:22%;min-width:190px;color:var(--ink-2);word-break:break-word}
+  td.loc b{color:var(--ink);font-weight:500}
+
+  td.what{min-width:300px}
+  td.what .d{font-weight:600;display:block;margin-bottom:4px}
+  td.what .f{color:var(--ink-2);font-size:12.5px;display:block}
+
+  td.ev{width:24%;min-width:210px;font-family:var(--mono);font-size:11px;color:var(--ink-2);line-height:1.5}
+  td.ev b{color:var(--ink);font-weight:500}
+
+  .empty{padding:36px 16px;text-align:center;color:var(--ink-3);font-family:var(--mono);font-size:12px}
+  .empty[hidden]{display:none}
+
+  .note{background:var(--panel);border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:0 7px 7px 0;padding:15px 17px;margin:0 0 18px}
+  .note.warn{border-left-color:var(--open)}
+  .note h3{margin:0 0 7px;font-family:var(--sans);font-size:13.5px;font-weight:700}
+  .note p{margin:0 0 8px;font-size:13.5px;color:var(--ink-2)}
+  .note p:last-child{margin-bottom:0}
+  .note ol,.note ul{margin:0 0 8px;padding-left:19px;font-size:13.5px;color:var(--ink-2)}
+  .note li{margin-bottom:4px}
+
+  /* Manual test card */
+  .test{border:1px solid var(--rule);border-radius:7px;background:var(--panel);margin-bottom:12px}
+  .thead{display:flex;gap:11px;align-items:baseline;padding:14px 17px 0}
+  .tnum{font-family:var(--mono);font-size:11px;color:var(--ink-3);flex:none;padding-top:3px}
+  .ttitle{font-family:var(--serif);font-size:16.5px;font-weight:600;line-height:1.3}
+  .tbody{padding:3px 17px 14px 44px}
+  @media (max-width:560px){.tbody{padding-left:17px}}
+  .tbody p,.tbody ol,.tbody ul{font-size:13.5px;color:var(--ink-2)}
+  .tbody ol,.tbody ul{margin:7px 0;padding-left:19px}
+  .expect{border-left:2px solid var(--rule);padding-left:11px;margin-top:9px;font-size:13px;color:var(--ink-2)}
+  .expect b{color:var(--ink);font-weight:600}
+
+  footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:11px;color:var(--ink-3);line-height:1.75}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ============================================================
+     HEADER — the tally is HAND-MAINTAINED. Every status change
+     updates three things together: the pill on the row, the
+     Evidence cell, and these numbers + the filter chip counts.
+     ============================================================ -->
+<header class="mast">
+  <div>
+    <p class="eyebrow">JOB NAME · DATE</p>
+    <h1>Board Title</h1>
+    <p class="sub">One or two sentences: what this job is, and what was read to produce the task list.</p>
+    <p class="sub"><strong>Taking a task? Read <em>Before you start</em> first.</strong> Every task gets a written proposal — issue, why, fix, gain, effort, risk, legacy — approved before any implementation file is touched, and this board is updated as each task moves.</p>
+    <div class="meta">
+      <span><b>Repo</b> name</span>
+      <span><b>Branch</b> branch-name</span>
+      <span><b>Head</b> abc1234 <span style="color:var(--ink-3)">(clean / N uncommitted files)</span></span>
+    </div>
+  </div>
+  <div class="tally">
+    <div class="t-open"><span class="n">3</span><span class="k">Open</span></div>
+    <div class="t-plan"><span class="n">0</span><span class="k">Plan submitted</span></div>
+    <div class="t-appr"><span class="n">0</span><span class="k">Approved</span></div>
+    <div class="t-fixed"><span class="n">0</span><span class="k">Fixed</span></div>
+  </div>
+</header>
+
+<!-- Delete any tab that this job does not need, and its panel with it.
+     Keep: Before you start, Queue, Tasks. Optional: Jobs, Manual tests, Method. -->
+<nav class="tabs" role="tablist" aria-label="Sections">
+  <button class="tab" role="tab" id="tab-proto" aria-controls="p-proto" aria-selected="true">Before you start <span class="c">read first</span></button>
+  <button class="tab" role="tab" id="tab-queue" aria-controls="p-queue" aria-selected="false">Queue <span class="c">3</span></button>
+  <button class="tab" role="tab" id="tab-tasks" aria-controls="p-tasks" aria-selected="false">Tasks <span class="c">3</span></button>
+  <button class="tab" role="tab" id="tab-tests" aria-controls="p-tests" aria-selected="false">Manual tests <span class="c">1</span></button>
+</nav>
+
+
+<!-- ========== BEFORE YOU START ========== -->
+<div class="panel" id="p-proto" role="tabpanel" aria-labelledby="tab-proto">
+
+  <p class="lede">If you have been asked to work on a task from this board, <strong>this page is the job — not the code change</strong>. You investigate one task, write a proposal in the shape below, update that task's row, and <strong>come back for approval before touching any implementation file</strong>.</p>
+
+  <div class="note warn">
+    <h3>The rule</h3>
+    <p><b>No implementation before an approved plan.</b> One task at a time. Read the task, read the code it cites, write the proposal, set the row to <span class="pill plan">Plan submitted</span>, and stop. Approval is the user saying so, in words — a silence, a thumbs-up on something else, or your own confidence that the fix is obvious are not approval.</p>
+    <p>Two things you <em>may</em> do without asking, because they are how the proposal gets written: <b>read anything</b>, and <b>run read-only checks</b> — greps, a throwaway probe in a scratch directory, a test suite that already exists. What you may not do is edit a file the fix would touch, or leave a scratch file behind in the repo.</p>
+    <p><b>If the task turns out to be wrong, say that instead of proposing a fix.</b> A proposal that opens "this does not hold, here is why" is a good outcome and finishes the task — set the row to <span class="pill refuted">Refuted</span> or <span class="pill byd">By design</span> with the evidence.</p>
+  </div>
+
+  <section class="group">
+    <div class="ghead"><h2>The proposal — these seven headings, in this order</h2><span class="rule"></span><span class="n">template</span></div>
+    <div class="tw"><table>
+      <thead><tr><th>#</th><th>What goes in it</th><th>What makes it wrong</th></tr></thead>
+      <tbody>
+        <tr class="s-open"><td class="id">1<span class="src">Issue</span></td><td class="what"><span class="d">What is wrong, in one or two plain sentences.</span><span class="f">Written for someone who has never opened this file. Expand an acronym the first time. No <code>file:line</code> yet — that is the next heading.</span></td><td class="ev">Restating the request back. You read the code; say what <em>you</em> found.</td></tr>
+        <tr class="s-open"><td class="id">2<span class="src">Why it's an issue</span></td><td class="what"><span class="d">The mechanism, and who it reaches.</span><span class="f">Concrete inputs or a sequence of events, and the wrong result they produce. Cite <code>file:line</code> for every behaviour claim. Say who notices and how.</span></td><td class="ev">"This is unsafe" or "bad practice". If you cannot name a sequence of events that produces a wrong result, you have not found the issue yet.</td></tr>
+        <tr class="s-open"><td class="id">3<span class="src">The fix</span></td><td class="what"><span class="d">What changes, in which files.</span><span class="f">The smallest change that does the job. Name what you are deliberately <em>not</em> changing. If there is more than one defensible approach, give a recommendation and one sentence on why — not a survey.</span></td><td class="ev">A refactor riding along with the fix. Speculative abstraction. Restructuring surrounding code to suit the edit.</td></tr>
+        <tr class="s-open"><td class="id">4<span class="src">What we gain</span></td><td class="what"><span class="d">The behaviour afterwards, stated as something observable.</span><span class="f">"Reloading the page shows the chart again" — not "improves correctness". If the gain is invisible until something else is also fixed, say which task.</span></td><td class="ev">Benefits that cannot be observed or measured. Padding a small fix into a big win.</td></tr>
+        <tr class="s-open"><td class="id">5<span class="src">Effort</span></td><td class="what"><span class="d"><b>S</b>, <b>M</b> or <b>L</b>, with the reason.</span><span class="f"><b>S</b> — one file, one change, covered by a suite that already exists. <b>M</b> — a few files or one seam, needs a new test. <b>L</b> — crosses a service boundary, or needs a migration, a contract change or a design decision; the plan must name the decision.</span></td><td class="ev">An hours estimate. The letter plus the reason is what is wanted.</td></tr>
+        <tr class="s-open"><td class="id">6<span class="src">Risk</span></td><td class="what"><span class="d"><b>Low</b>, <b>Medium</b> or <b>High</b>, plus how you would verify.</span><span class="f"><b>Low</b> — the blast radius is the thing being fixed. <b>Medium</b> — a shared path, so a mistake reaches other features; name a verification step beyond "tests pass". <b>High</b> — can destroy or orphan data, change a persisted shape, or move behaviour no test asserts; needs a rollback plan and a check against real data.</span></td><td class="ev">Naming a risk level with no verification step attached. "Low risk" on a migration or a shared path.</td></tr>
+        <tr class="s-open"><td class="id">7<span class="src">Legacy</span></td><td class="what"><span class="d">Name it, price it, recommend — then <b>ask</b>.</span><span class="f">(1) What legacy logic is in reach: the old shape, name, column, route or code path, and where it is read or written. (2) What we lose without it, concretely, and who sees it. (3) Your recommendation — support it or drop it, and why. (4) <b>The user decides.</b> There is no default either way.</span></td><td class="ev">Removing the old path because it looks dead. Quietly adding a fallback or a shim and not declaring it. "Not sure" — you read the file, so you know.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <div class="note warn">
+    <h3>Legacy is the user's decision, not yours</h3>
+    <p><b>There is no default.</b> Do not assume the old path is removed, and do not assume it is kept. Heading 7 states what the legacy logic is, what is lost without it, and which way you would go — and then <b>stops and asks</b>. Nothing is implemented on that point until the answer arrives in words.</p>
+  </div>
+
+  <div class="note">
+    <h3>Check the lane before you plan</h3>
+    <p>Name every directory this job's fixes reach. Before editing anything outside the lane you were given, <b>ask once per job</b>, naming every directory. Do not implement across the boundary because the fix is small — small is not the criterion.</p>
+  </div>
+
+  <div class="note">
+    <h3>Plan against the code, not against the row</h3>
+    <p>Rows carry the evidence of the pass that wrote them, and the tree moves. Re-read the cited files before you write anything. Where what you find disagrees with the row, the code wins and the row gets corrected — that correction is part of the deliverable, not an aside.</p>
+  </div>
+
+  <section class="group">
+    <div class="ghead"><h2>Keeping this board current</h2><span class="rule"></span><span class="n">lifecycle</span></div>
+    <div class="tw"><table>
+      <thead><tr><th>Status</th><th>Means</th><th>Set it when</th></tr></thead>
+      <tbody>
+        <tr class="s-open"><td class="st"><span class="pill open">Open</span></td><td class="what"><span class="d">Confirmed, nobody is on it.</span></td><td class="ev">The resting state. Also where a task goes back if a plan is rejected.</td></tr>
+        <tr class="s-plan"><td class="st"><span class="pill plan">Plan submitted</span></td><td class="what"><span class="d">A proposal exists and is waiting on the user.</span></td><td class="ev">The moment you present the proposal. Put the effort and risk letters in the row so the queue reads without opening each plan.</td></tr>
+        <tr class="s-appr"><td class="st"><span class="pill appr">Approved</span></td><td class="what"><span class="d">Approved, and being implemented.</span></td><td class="ev">Only after the user approves, in words. The only status under which implementation files may be edited.</td></tr>
+        <tr class="s-fixed"><td class="st"><span class="pill fixed">Fixed</span></td><td class="what"><span class="d">Changed, and the failure can no longer happen.</span></td><td class="ev">After verifying — not after writing the code. Evidence says what you ran and what it printed.</td></tr>
+        <tr class="s-partial"><td class="st"><span class="pill partial">Partly fixed</span></td><td class="what"><span class="d">Some of it is addressed and the rest is not.</span></td><td class="ev">When scope was deliberately cut. Say which half is done — never leave a partial fix reading as Fixed.</td></tr>
+        <tr class="s-refuted"><td class="st"><span class="pill refuted">Refuted</span></td><td class="what"><span class="d">The mechanism was checked and does not hold.</span></td><td class="ev">Keep the row. A disproved issue that gets deleted is one the next reviewer finds again.</td></tr>
+        <tr class="s-byd"><td class="st"><span class="pill byd">By design</span></td><td class="what"><span class="d">Real behaviour, intended.</span></td><td class="ev">Same rule — keep it, with the evidence that it is deliberate.</td></tr>
+        <tr class="s-defer"><td class="st"><span class="pill defer">Deferred</span></td><td class="what"><span class="d">Real, confirmed, and parked.</span></td><td class="ev">When the user parks a task rather than approving or rejecting its plan. It leaves the Queue with its plan intact and is <b>still an open exposure</b>.</td></tr>
+        <tr class="s-out"><td class="st"><span class="pill out">Assigned out</span></td><td class="what"><span class="d">Owned by someone else now.</span></td><td class="ev">Handed to another person or filed as an issue. Keeps its row and its plan; still open until that issue closes.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <div class="note warn">
+    <h3>Update the board in the same turn as the change</h3>
+    <p>A status is only useful if it is true right now, so the row moves <b>when the thing happens</b> — not at the end of a batch and not "once it is all done". Every move updates three things together: the <b>pill</b>, the <b>Evidence</b> cell (what you did and what proved it), and the <b>tally and chip counts</b> in the header, which are hand-maintained and will silently disagree with the rows if you skip them.</p>
+    <p>The <b>Queue</b> is maintained too: a task that reaches Fixed leaves it and the ranks close up. If fixing one task changes another's priority, say so and re-rank rather than leaving a stale order behind.</p>
+    <p><b>Work lands uncommitted.</b> No commit, push or PR unless the user says so, in words. Republish to the same URL so the link keeps working.</p>
+  </div>
+</div>
+
+
+<!-- ========== QUEUE ========== -->
+<div class="panel" id="p-queue" role="tabpanel" aria-labelledby="tab-queue" hidden>
+  <p class="lede">Open tasks in the order they are meant to be worked. <strong>Rank is not severity</strong> — it is severity weighted by how much of the product the task actually reaches, how certain the diagnosis is, and how cheap the fix is. A task that reaches <span class="pill fixed">Fixed</span> leaves this tab and the ranks below close up.</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>Rank</th><th>#</th><th>Status</th><th>Task</th><th>Lane</th><th>Effort · Risk</th></tr></thead>
+    <tbody>
+      <tr class="s-open"><td class="id">1</td><td class="id">01</td><td class="st"><span class="pill open">Open</span></td><td class="what"><span class="d">One line naming the task.</span></td><td class="loc">dir/</td><td class="ev">—</td></tr>
+      <tr class="s-open"><td class="id">2</td><td class="id">02</td><td class="st"><span class="pill open">Open</span></td><td class="what"><span class="d">One line naming the task.</span></td><td class="loc">dir/</td><td class="ev">—</td></tr>
+      <tr class="s-open"><td class="id">3</td><td class="id">03</td><td class="st"><span class="pill open">Open</span></td><td class="what"><span class="d">One line naming the task.</span></td><td class="loc">dir/</td><td class="ev">—</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+
+<!-- ========== TASKS ========== -->
+<div class="panel" id="p-tasks" role="tabpanel" aria-labelledby="tab-tasks" hidden>
+
+  <p class="lede">Every task, grouped by the area that owns it. <strong>Status is what is true in the tree right now</strong> — the Evidence column names the file and line that decided it, and what was run to prove a fix.</p>
+
+  <!-- Chip counts are hand-maintained too. Delete chips for statuses this board has none of. -->
+  <div class="filters">
+    <span class="flabel">Status</span>
+    <button class="chip" data-st="all" aria-pressed="true"><span class="dot all"></span>All 3</button>
+    <button class="chip" data-st="open" aria-pressed="false"><span class="dot open"></span>Open 3</button>
+    <button class="chip" data-st="plan" aria-pressed="false"><span class="dot plan"></span>Plan submitted 0</button>
+    <button class="chip" data-st="appr" aria-pressed="false"><span class="dot appr"></span>Approved 0</button>
+    <button class="chip" data-st="fixed" aria-pressed="false"><span class="dot fixed"></span>Fixed 0</button>
+  </div>
+
+  <section class="group" data-group>
+    <div class="ghead"><h2>Area name</h2><span class="rule"></span><span class="n" data-gcount>3</span></div>
+    <div class="tw"><table>
+      <thead><tr><th>#</th><th>Status</th><th>Location</th><th>Issue &amp; failure</th><th>Evidence / decision</th></tr></thead>
+      <tbody>
+
+        <!-- ROW TEMPLATE. Keep `class="s-<st>"` and `data-st="<st>"` in sync —
+             the first colours the left edge, the second drives the filter chips. -->
+        <tr class="s-open" data-st="open">
+          <td class="id">01</td>
+          <td class="st">
+            <span class="pill open">Open</span>
+            <span class="sev crit">Critical</span>
+            <span class="sev">Effort — · Risk —</span>
+            <span class="sev">lane: dir/</span>
+          </td>
+          <td class="loc"><b>file.py</b>:120<br>other_file.ts:44</td>
+          <td class="what">
+            <span class="d">One sentence: what is wrong.</span>
+            <span class="f">Two or three sentences: the mechanism, in the plainest words that are still accurate. The full explanation goes in chat, not here.</span>
+          </td>
+          <td class="ev">What was read or run to decide this, with the line that settled it.</td>
+        </tr>
+
+        <tr class="s-open" data-st="open">
+          <td class="id">02</td>
+          <td class="st"><span class="pill open">Open</span><span class="sev high">Serious</span><span class="sev">Effort — · Risk —</span><span class="sev">lane: dir/</span></td>
+          <td class="loc"><b>file.go</b>:88</td>
+          <td class="what"><span class="d">One sentence: what is wrong.</span><span class="f">The mechanism, briefly.</span></td>
+          <td class="ev">Evidence.</td>
+        </tr>
+
+        <tr class="s-open" data-st="open">
+          <td class="id">03</td>
+          <td class="st"><span class="pill open">Open</span><span class="sev med">Warning</span><span class="sev">Effort — · Risk —</span><span class="sev">lane: dir/</span></td>
+          <td class="loc"><b>file.tsx</b>:12</td>
+          <td class="what"><span class="d">One sentence: what is wrong.</span><span class="f">The mechanism, briefly.</span></td>
+          <td class="ev">Evidence.</td>
+        </tr>
+
+      </tbody>
+    </table></div>
+  </section>
+
+  <p class="empty" id="no-match" hidden>No task in that state.</p>
+</div>
+
+
+<!-- ========== MANUAL TESTS (optional — delete the tab and this panel if unused) ========== -->
+<div class="panel" id="p-tests" role="tabpanel" aria-labelledby="tab-tests" hidden>
+  <p class="lede">Checks that need a browser, a real provider, or a judgement call — none can be settled from a test runner.</p>
+
+  <div class="test"><div class="thead"><span class="tnum">01</span><span class="ttitle">What to do, as a title</span></div><div class="tbody">
+    <p>One or two sentences on what this proves and which task it belongs to.</p>
+    <ol>
+      <li>Step.</li>
+      <li>Step.</li>
+    </ol>
+    <div class="expect"><b>Expect:</b> what a pass looks like, concretely.</div>
+  </div></div>
+</div>
+
+
+<footer>
+  Updated <b>DATE</b> · every status change updates the pill, the Evidence cell and the tally together.<br>
+  Work lands uncommitted; nothing is committed, pushed or opened as a PR unless asked for in words.
+</footer>
+
+</div>
+
+<script>
+  (function () {
+    "use strict";
+
+    // Tabs
+    var tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
+    function select(tab) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute("aria-selected", on ? "true" : "false");
+        var pane = document.getElementById(t.getAttribute("aria-controls"));
+        if (pane) pane.hidden = !on;
+      });
+    }
+    tabs.forEach(function (t) {
+      t.addEventListener("click", function () { select(t); });
+      t.addEventListener("keydown", function (e) {
+        var i = tabs.indexOf(t), n = tabs.length;
+        if (e.key === "ArrowRight") { tabs[(i + 1) % n].focus(); select(tabs[(i + 1) % n]); }
+        if (e.key === "ArrowLeft") { tabs[(i - 1 + n) % n].focus(); select(tabs[(i - 1 + n) % n]); }
+      });
+    });
+
+    // Status filter chips. Group counts and the empty state follow the rows.
+    var chips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
+    var rows = Array.prototype.slice.call(document.querySelectorAll("tr[data-st]"));
+    var groups = Array.prototype.slice.call(document.querySelectorAll("[data-group]"));
+    var none = document.getElementById("no-match");
+
+    function filter(st) {
+      rows.forEach(function (r) {
+        r.hidden = !(st === "all" || r.getAttribute("data-st") === st);
+      });
+      var any = false;
+      groups.forEach(function (g) {
+        var shown = g.querySelectorAll("tr[data-st]:not([hidden])").length;
+        g.hidden = shown === 0;
+        var c = g.querySelector("[data-gcount]");
+        if (c) c.textContent = shown;
+        if (shown) any = true;
+      });
+      if (none) none.hidden = any;
+    }
+
+    chips.forEach(function (c) {
+      c.addEventListener("click", function () {
+        chips.forEach(function (o) { o.setAttribute("aria-pressed", o === c ? "true" : "false"); });
+        filter(c.getAttribute("data-st"));
+      });
+    });
+  })();
+</script>
+</body>
+</html>

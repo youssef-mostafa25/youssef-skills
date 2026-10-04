@@ -1,0 +1,875 @@
+<title>{{TARGET_SHORT_NAME}} {{SOURCE_SHORT_NAME}} Merge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a tabbed review sheet. Header and summary stay on top; each tab holds one view: source branch, target branch, combined, issues, one per verification round, and decisions (the only tab with choices). */
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --sunk: #eef1f5;
+  --ink: #18202c;
+  --muted: #586274;
+  --line: #d9dee6;
+  --source: #0d7383;
+  --source-soft: #dff1f3;
+  --target: #a35f12;
+  --target-soft: #f7ecdd;
+  --crit: #b3261e;
+  --crit-soft: #fbe6e4;
+  --warn: #946200;
+  --warn-soft: #fbf0d6;
+  --info: #2f5f9a;
+  --info-soft: #e3ecf8;
+  --ok: #2c7a45;
+  --ok-soft: #e1f2e6;
+  --focus: #2f5f9a;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151c; --surface: #181e27; --sunk: #1f2631; --ink: #e6eaf0; --muted: #9aa4b5; --line: #2c3542;
+    --source: #4cc0cf; --source-soft: #123238; --target: #e3a45a; --target-soft: #3a2a16;
+    --crit: #f08a82; --crit-soft: #3d1c1a; --warn: #e6bb5c; --warn-soft: #3a2f14; --info: #8fb4e6; --info-soft: #1b2a3f;
+    --ok: #7fcf98; --ok-soft: #173222; --focus: #8fb4e6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151c; --surface: #181e27; --sunk: #1f2631; --ink: #e6eaf0; --muted: #9aa4b5; --line: #2c3542;
+  --source: #4cc0cf; --source-soft: #123238; --target: #e3a45a; --target-soft: #3a2a16;
+  --crit: #f08a82; --crit-soft: #3d1c1a; --warn: #e6bb5c; --warn-soft: #3a2f14; --info: #8fb4e6; --info-soft: #1b2a3f;
+  --ok: #7fcf98; --ok-soft: #173222; --focus: #8fb4e6;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  padding-inline: 16px;
+  padding-block: 28px 120px;
+}
+.page { max-width: 1200px; margin-inline: auto; display: grid; gap: 44px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(28px, 4.4vw, 40px); font-weight: 700; }
+h2 { font-size: 24px; font-weight: 700; }
+h3 { font-size: 17px; font-weight: 600; }
+p { margin: 0; max-width: 72ch; }
+code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* Header */
+header { display: grid; gap: 18px; }
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.direction { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 14px; }
+.branch { padding: 4px 10px; border-radius: 6px; font-weight: 500; }
+.branch.source { background: var(--source-soft); color: var(--source); }
+.branch.target { background: var(--target-soft); color: var(--target); }
+.arrow { color: var(--muted); }
+.lede { color: var(--muted); font-size: 16px; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 2px; }
+.stat b { font-family: var(--font-display); font-size: 28px; font-variant-numeric: tabular-nums; font-weight: 700; }
+.stat span { color: var(--muted); font-size: 13px; }
+.stat.crit b { color: var(--crit); }
+.stat.warn b { color: var(--warn); }
+.stat.info b { color: var(--info); }
+.stat.ok b { color: var(--ok); }
+
+nav.toc { display: flex; flex-wrap: wrap; gap: 8px; }
+nav.toc a { color: var(--ink); text-decoration: none; font-size: 14px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+nav.toc a:hover { border-color: var(--muted); }
+
+/* Tabs */
+.tablist { display: flex; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.tablist button {
+  font: inherit; font-family: var(--font-display); font-weight: 600; font-size: 15px;
+  padding: 9px 16px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); cursor: pointer; display: grid; gap: 1px; text-align: left;
+}
+.tablist button small { font-family: var(--font-body); font-weight: 400; font-size: 12px; color: var(--muted); }
+.tablist button[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tablist button[aria-selected="true"] small { color: var(--bg); opacity: 0.75; }
+
+section { display: grid; gap: 16px; }
+[role="tabpanel"] { display: grid; gap: 44px; }
+.section-head { display: grid; gap: 6px; }
+.section-head p { color: var(--muted); }
+
+/* The point box */
+.point { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--ink); border-radius: 8px; padding: 14px 18px; display: grid; gap: 6px; }
+.point strong { font-family: var(--font-display); font-size: 16px; }
+.point.crit { border-left-color: var(--crit); }
+.point.ok { border-left-color: var(--ok); }
+
+/* Tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+th { background: var(--sunk); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--font-mono); color: var(--muted); white-space: nowrap; }
+td .area { font-weight: 600; display: block; }
+td .sub { color: var(--muted); font-size: 13px; display: block; margin-top: 2px; }
+table.branch-table { min-width: 860px; }
+table.conflict-table { min-width: 720px; }
+table.issues { min-width: 1020px; }
+table.verdicts { min-width: 820px; }
+td ul, td ol { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+
+.chip { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.high { background: var(--crit-soft); color: var(--crit); }
+.chip.med { background: var(--warn-soft); color: var(--warn); }
+.chip.low { background: var(--info-soft); color: var(--info); }
+.chip.none { background: var(--ok-soft); color: var(--ok); }
+.chip.kind { background: var(--sunk); color: var(--ink); font-family: var(--font-mono); font-weight: 500; }
+.chip.new { background: var(--crit-soft); color: var(--crit); }
+.chip.same { background: var(--sunk); color: var(--muted); }
+.chip.up { background: var(--warn-soft); color: var(--warn); }
+.chip.fix { background: var(--ok-soft); color: var(--ok); }
+/* Verdict chips for verification tabs and decision cards */
+.chip.v-ok { background: var(--ok-soft); color: var(--ok); }
+.chip.v-part { background: var(--warn-soft); color: var(--warn); }
+.chip.v-bad { background: var(--crit-soft); color: var(--crit); }
+.chip.v-open { background: var(--info-soft); color: var(--info); }
+table.claims { min-width: 760px; }
+table.claims td:first-child { white-space: nowrap; font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+table.claims td:nth-child(2) { white-space: nowrap; }
+.group-label { font-family: var(--font-display); font-weight: 600; font-size: 15px; }
+/* Decision cards: one per decision, read top to bottom */
+.dcards { display: grid; gap: 22px; }
+.dcard { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 14px; min-width: 0; }
+.dcard[data-sev="crit"] { border-top: 4px solid var(--crit); }
+.dcard[data-sev="warn"] { border-top: 4px solid var(--warn); }
+.dcard[data-sev="info"] { border-top: 4px solid var(--info); }
+.dcard-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.dcard-head h3 { flex: 1 1 320px; min-width: 0; }
+.dcard-head .num { font-family: var(--font-mono); color: var(--muted); font-size: 14px; }
+.dcard .thepoint { font-size: 16px; font-weight: 500; max-width: 80ch; }
+.explain { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.explain > div { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.explain p { max-width: none; }
+table.opts { min-width: 720px; }
+table.opts tr.rec td { background: var(--ok-soft); }
+table.opts td:first-child { font-family: var(--font-mono); white-space: nowrap; }
+.effort { display: inline-block; font-family: var(--font-mono); font-weight: 600; font-size: 12px; padding: 2px 8px; border-radius: 4px; background: var(--sunk); color: var(--ink); }
+.recbox { background: var(--ok-soft); border-radius: 8px; padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.recbox p { flex: 1 1 360px; min-width: 0; max-width: none; }
+.recbox strong { color: var(--ok); }
+.glossary { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 20px; margin: 0; }
+.glossary div { min-width: 0; }
+.glossary dt { font-weight: 600; font-family: var(--font-mono); font-size: 13px; }
+.glossary dd { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.userec { font: inherit; font-size: 14px; font-weight: 600; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--ok); background: var(--ok-soft); color: var(--ok); cursor: pointer; }
+
+.sev { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; }
+.sev.crit { background: var(--crit-soft); color: var(--crit); }
+.sev.warn { background: var(--warn-soft); color: var(--warn); }
+.sev.info { background: var(--info-soft); color: var(--info); }
+.sev.ok { background: var(--ok-soft); color: var(--ok); }
+
+tr.issue > td:first-child { border-left: 4px solid transparent; }
+tr.issue[data-sev="crit"] > td:first-child { border-left-color: var(--crit); }
+tr.issue[data-sev="warn"] > td:first-child { border-left-color: var(--warn); }
+tr.issue[data-sev="info"] > td:first-child { border-left-color: var(--info); }
+tr.issue[data-sev="ok"] > td:first-child { border-left-color: var(--ok); }
+tr.issue > td { border-bottom: 0; }
+tr.issue .title { font-weight: 600; display: block; }
+tr.detail > td { background: var(--sunk); padding-top: 12px; padding-bottom: 16px; }
+tr.detail > td:first-child { border-left: 4px solid transparent; }
+tr.detail[data-sev="crit"] > td:first-child { border-left-color: var(--crit); }
+tr.detail[data-sev="warn"] > td:first-child { border-left-color: var(--warn); }
+tr.detail[data-sev="info"] > td:first-child { border-left-color: var(--info); }
+tr.detail[data-sev="ok"] > td:first-child { border-left-color: var(--ok); }
+.detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.detail-grid > div { min-width: 0; display: grid; gap: 6px; align-content: start; }
+.label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+pre.code { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.5; white-space: pre; }
+pre.mermaid { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px; overflow-x: auto; }
+.options { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.options li::marker { font-family: var(--font-mono); color: var(--muted); }
+
+select.pick { font: inherit; font-size: 13px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); min-width: 84px; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.filters button { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--muted); }
+
+/* Reply bar */
+.replybar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 5; }
+.replybar-inner { max-width: 1200px; margin-inline: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.replybar .label { flex: none; }
+.replybar code { flex: 1 1 280px; min-width: 0; overflow-x: auto; white-space: nowrap; background: var(--sunk); border-radius: 6px; padding: 7px 10px; font-size: 13px; }
+.replybar button { font: inherit; font-size: 13px; font-weight: 600; padding: 7px 14px; border-radius: 6px; border: 0; background: var(--ink); color: var(--bg); cursor: pointer; }
+.replybar .status { font-size: 13px; color: var(--muted); min-width: 60px; }
+.replybar .whichtab { font-size: 12px; font-weight: 600; color: var(--muted); background: var(--sunk); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+
+/* Sticky tab bar and the live-decisions badge */
+.tablist { position: sticky; top: 0; z-index: 4; background: var(--bg); padding-top: 10px; }
+.tablist button .tabbadge { font-family: var(--font-body); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ok); }
+.tablist button[aria-selected="true"] .tabbadge { color: var(--bg); opacity: 0.85; }
+.point.warn { border-left-color: var(--warn); }
+a[data-goto] { color: inherit; text-decoration: underline; text-decoration-color: var(--muted); text-underline-offset: 2px; }
+
+@media (max-width: 720px) {
+  .detail-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<!--
+  MERGE REVIEW TEMPLATE: a tabbed page, one view per tab, in this order:
+    Source · Target · Combined · Issues · Verification 1, 2, … (optional) · Decisions
+  Decisions is always the last tab and the ONLY tab with pickers. It is rebuilt after
+  every verification round and always reflects the latest (most verified) round; the
+  script reads that round from the last Verification tab and shows it as "Based on …".
+  Earlier tabs are never rewritten: they are the record of each pass.
+
+  To add a verification round: copy the two <template> blocks at the end of the page
+  into place (button before the Decisions button, panel before the Decisions panel),
+  replace verify-N / Verification N with the round number, then rebuild Decisions.
+
+  On EVERY publish: bump "rev" and set "updated" in #review-meta. The copied reply
+  starts with that revision so Claude can tell when the page changed in another session.
+
+  Fill every {{PLACEHOLDER}}, copy each "repeat" block once per item, delete optional
+  blocks you don't use, delete the <template> blocks and these comments, then check
+  that no {{ remains. Keep the <style> and <script> blocks, ids, data-tab values,
+  class names and the pick contract (<select class="pick" data-issue="D1" data-rec="1">).
+  Cross-tab links: <a href="#issue-3" data-goto="issues">Issue 3</a> opens the tab and
+  scrolls to the element with that id.
+-->
+
+<script type="application/json" id="review-meta">{"source": "{{SOURCE_BRANCH}}", "target": "{{TARGET_BRANCH}}", "rev": 1, "updated": "{{YYYY-MM-DD HH:MM UTC}}"}</script>
+
+<div class="page">
+
+<header>
+  <div class="eyebrow">Merge review · {{DATE, e.g. 4 Oct 2026}} · rev <span data-meta="rev">1</span></div>
+  <h1>Merging {{SOURCE_BRANCH}} into {{TARGET_BRANCH}}</h1>
+  <div class="direction">
+    <span class="branch source">{{SOURCE_BRANCH}} · {{SOURCE_SHORT_HASH}}</span>
+    <span class="arrow">into</span>
+    <span class="branch target">{{TARGET_BRANCH}} · {{TARGET_SHORT_HASH}}</span>
+  </div>
+  <p class="lede">Nothing has been merged yet. Each tab is one view of the merge. You make every choice on the <b>Decisions</b> tab, which reflects the latest verification; the bar at the bottom copies your reply from there.</p>
+  <div class="stats">
+    <div class="stat"><b>{{N}}</b><span>commits on {{SOURCE_BRANCH}}</span></div>
+    <div class="stat"><b>{{N}}</b><span>commits on {{TARGET_BRANCH}}</span></div>
+    <div class="stat"><b>{{N}}</b><span>files changed on both</span></div>
+    <div class="stat"><b>{{N}}</b><span>files with conflict markers</span></div>
+    <div class="stat crit"><b>{{N}}</b><span>critical issues</span></div>
+    <div class="stat warn"><b>{{N}}</b><span>warnings</span></div>
+    <div class="stat info"><b>{{N}}</b><span>decisions for you</span></div>
+  </div>
+</header>
+
+<div class="tablist" role="tablist" aria-label="Merge review">
+  <button type="button" role="tab" data-tab="source" data-short="Source" id="tab-source" aria-controls="panel-source" aria-selected="false">{{SOURCE_BRANCH}}<small>Source branch · {{N}} areas</small></button>
+  <button type="button" role="tab" data-tab="target" data-short="Target" id="tab-target" aria-controls="panel-target" aria-selected="false">{{TARGET_BRANCH}}<small>Target branch · {{N}} areas</small></button>
+  <button type="button" role="tab" data-tab="combined" data-short="Combined" id="tab-combined" aria-controls="panel-combined" aria-selected="false">Combined<small>{{N}} conflicted · {{N}} risky clean merges</small></button>
+  <button type="button" role="tab" data-tab="issues" data-short="Issues" id="tab-issues" aria-controls="panel-issues" aria-selected="false">Issues<small>First pass · {{N}} issues</small></button>
+  <!-- verification round tab buttons go here, in order -->
+  <button type="button" role="tab" data-tab="decisions" data-short="Decisions" id="tab-decisions" aria-controls="panel-decisions" aria-selected="true">Decisions<small>{{N}} to decide</small></button>
+</div>
+
+<!-- ================= SOURCE BRANCH ================= -->
+<div role="tabpanel" data-tab="source" id="panel-source" aria-labelledby="tab-source" hidden>
+  <section>
+    <div class="section-head">
+      <h2>What {{SOURCE_BRANCH}} changed</h2>
+      <p>{{N}} commits and {{N}} files since the merge base. {{One-sentence summary of the branch's intent.}} The last column says how much each change collides with {{TARGET_BRANCH}}.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="branch-table">
+        <thead><tr><th>#</th><th>Area</th><th>What changed</th><th>In plain words</th><th>Collides with {{TARGET_BRANCH}}</th></tr></thead>
+        <tbody>
+          <!-- repeat: one row per change area, numbered S1, S2, … Chip class: high | med | low | none -->
+          <tr><td class="num">S1</td><td><span class="area">{{Area}}</span><span class="sub">{{optional: PR numbers, migration ids}}</span></td><td>{{Technical summary with <code>names</code>}}</td><td>{{What it means, in plain words}}</td><td><span class="chip high">High</span><span class="sub">{{One-line reason, e.g. <a href="#issue-1" data-goto="issues">Issue 1</a>}}</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- ================= TARGET BRANCH ================= -->
+<div role="tabpanel" data-tab="target" id="panel-target" aria-labelledby="tab-target" hidden>
+  <section>
+    <div class="section-head">
+      <h2>What {{TARGET_BRANCH}} changed</h2>
+      <p>{{N}} commits and {{N}} files since the merge base. {{One-sentence summary of the branch's intent.}} The last column says how much each change collides with {{SOURCE_BRANCH}}.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="branch-table">
+        <thead><tr><th>#</th><th>Area</th><th>What changed</th><th>In plain words</th><th>Collides with {{SOURCE_BRANCH}}</th></tr></thead>
+        <tbody>
+          <!-- repeat: one row per change area, numbered T1, T2, … -->
+          <tr><td class="num">T1</td><td><span class="area">{{Area}}</span></td><td>{{Technical summary with <code>names</code>}}</td><td>{{What it means, in plain words}}</td><td><span class="chip none">None</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- ================= COMBINED ================= -->
+<div role="tabpanel" data-tab="combined" id="panel-combined" aria-labelledby="tab-combined" hidden>
+  <section>
+    <div class="section-head">
+      <h2>Big picture</h2>
+      <p>{{One plain paragraph: the merge base <code>{{MERGE_BASE_SHORT_HASH}}</code> and its date, any earlier merge between the branches, and what the fetch/pull brought in.}}</p>
+    </div>
+    <pre class="mermaid">
+flowchart LR
+  MB["merge base {{MERGE_BASE_SHORT_HASH}}"] --> S["{{SOURCE_BRANCH}}: +{{N}} commits"]
+  MB --> T["{{TARGET_BRANCH}}: +{{N}} commits"]
+  S -->|"{{what the source branch did, in a few words}}"| M{"merge"}
+  T -->|"{{what the target branch did, in a few words}}"| M
+  M --> C["{{N}} files with conflict markers"]
+  M --> Q["{{N}} clean merges, {{how many still need checking}}"]
+    </pre>
+    <div class="point">
+      <strong>The one thing to understand</strong>
+      <p>{{The single most important fact about this merge, in plain words. Two to four sentences.}}</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Conflict map</h2>
+      <p>The {{N}} files that will have conflict markers, and the issue that covers each one. Type: <b>UU</b> both edited · <b>AA</b> both added the same filename · <b>DU</b> deleted on {{TARGET_BRANCH}}, edited on {{SOURCE_BRANCH}} · <b>UD</b> edited on {{TARGET_BRANCH}}, deleted on {{SOURCE_BRANCH}}.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="conflict-table">
+        <thead><tr><th>File</th><th>Type</th><th>What collides</th><th>Covered by</th></tr></thead>
+        <tbody>
+          <!-- repeat: one row per conflicted file; group trivially related files into one row -->
+          <tr><td><code>{{path/to/file}}</code></td><td><span class="chip kind">UU ×{{hunks}}</span></td><td>{{What each side did to it}}</td><td><a href="#issue-1" data-goto="issues">Issue 1</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Clean merges that still need checking</h2>
+      <p>Files changed on both sides that merged without a conflict marker, but where the two sides' changes don't agree. A clean merge is not a correct merge.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="conflict-table">
+        <thead><tr><th>File</th><th>Risk</th><th>Why it is not safe</th><th>Covered by</th></tr></thead>
+        <tbody>
+          <!-- repeat; or one row: "None found: every clean merge was checked and is consistent." Chip: high | med | low -->
+          <tr><td><code>{{path/to/file}}</code></td><td><span class="chip med">Medium</span></td><td>{{e.g. one side changed a signature, the other added a caller using the old one}}</td><td><a href="#issue-2" data-goto="issues">Issue 2</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- ================= ISSUES (first pass) ================= -->
+<div role="tabpanel" data-tab="issues" id="panel-issues" aria-labelledby="tab-issues" hidden>
+  <section>
+    <div class="section-head">
+      <h2>Issues found</h2>
+      <p>The first pass. Each issue has a short explanation, a real example from the code and, where steps chain together, a flowchart. The last column says which decision covers it.</p>
+    </div>
+    <div class="filters" role="group" aria-label="Filter by severity">
+      <button type="button" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" data-filter="crit" aria-pressed="false">Critical</button>
+      <button type="button" data-filter="warn" aria-pressed="false">Warning</button>
+      <button type="button" data-filter="info" aria-pressed="false">Info</button>
+    </div>
+    <div class="table-wrap">
+      <table class="issues">
+        <thead><tr><th>#</th><th>Severity</th><th>Issue</th><th>What's happening</th><th>Decided in</th></tr></thead>
+        <tbody>
+
+<!-- repeat: issue whose failure chains through steps. id="issue-<n>". data-sev / .sev class: crit | warn | info -->
+<tr class="issue" id="issue-1" data-sev="crit"><td class="num">1</td><td><span class="sev crit">Critical</span></td>
+<td><span class="title">{{Short issue title}}</span></td>
+<td>{{2–4 sentences with <code>file:line</code> references}}</td>
+<td><a href="#decision-D1" data-goto="decisions">D1</a></td></tr>
+<tr class="detail" data-sev="crit"><td></td><td colspan="4"><div class="detail-grid">
+<div><span class="label">Example</span><pre class="code">{{The real code line, error text or payload from this merge. Escape &lt; and &amp;.}}</pre></div>
+<div><span class="label">Flow</span><pre class="mermaid">
+flowchart LR
+  A["{{step 1}}"] --> B["{{step 2}}"]
+  B -->|"{{why}}"| C["{{what breaks}}"]
+</pre></div>
+</div></td></tr>
+
+<!-- repeat: single-step issue -->
+<tr class="issue" id="issue-2" data-sev="warn"><td class="num">2</td><td><span class="sev warn">Warning</span></td>
+<td><span class="title">{{Short issue title}}</span></td>
+<td>{{2–4 sentences with <code>file:line</code> references}}</td>
+<td>{{Small fixes}}</td></tr>
+<tr class="detail" data-sev="warn"><td></td><td colspan="4"><div class="detail-grid">
+<div><span class="label">Example</span><pre class="code">{{The real code line, error text or payload}}</pre></div>
+<div><span class="label">Single step</span><p>No flow to draw: {{why it is a single step}}.</p></div>
+</div></td></tr>
+
+<!-- repeat: info note (no detail row) -->
+<tr class="issue" id="issue-3" data-sev="info"><td class="num">3</td><td><span class="sev info">Info</span></td>
+<td><span class="title">{{Short note title}}</span></td>
+<td>{{What is worth knowing}}</td><td>No decision needed</td></tr>
+
+        </tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <span><span class="sev crit">Critical</span> breaks at runtime or loses data if ignored</span>
+      <span><span class="sev warn">Warning</span> likely bug; your call</span>
+      <span><span class="sev info">Info</span> good to know</span>
+    </div>
+  </section>
+</div>
+
+<!-- verification round panels go here, in order -->
+
+<!-- ================= DECISIONS (always last; the only tab with pickers) ================= -->
+<div role="tabpanel" data-tab="decisions" id="panel-decisions" aria-labelledby="tab-decisions">
+
+  <section>
+    <div class="point ok">
+      <strong>Based on <span data-basis>the first pass</span></strong>
+      <p>{{After a verification round: "This list supersedes the earlier tabs; where they disagree, this one is right." plus what changed most. First pass only: say these are the choices from the first analysis.}}</p>
+    </div>
+    <!-- optional: anything that must happen before the merge starts -->
+    <div class="point crit">
+      <strong>{{Settle X before the merge starts}}</strong>
+      <p>{{Why, in plain words.}}</p>
+    </div>
+  </section>
+
+  <!-- optional: only when the cards use terms a newcomer wouldn't know -->
+  <section>
+    <div class="section-head">
+      <h2>Words used here</h2>
+    </div>
+    <dl class="glossary">
+      <!-- repeat -->
+      <div><dt>{{term}}</dt><dd>{{Plain-words definition, with an example from this merge.}}</dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Recommendations at a glance</h2>
+      <p>Effort is a rough guess: <span class="effort">S</span> a few hours · <span class="effort">M</span> about a day · <span class="effort">L</span> several days. Risk is what could go wrong if you follow the recommendation. Each card below explains why.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="verdicts">
+        <thead><tr><th>#</th><th>Decision</th><th>Recommended</th><th>Effort</th><th>Risk</th></tr></thead>
+        <tbody>
+          <!-- repeat: one row per decision card -->
+          <tr><td class="num"><a href="#decision-D1" data-goto="decisions">D1</a></td><td>{{Decision title}}</td><td>{{1 · short name of the option}}</td><td><span class="effort">{{S|M|L}}</span></td><td>{{Low | Medium | High}}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="recbox">
+      <p><strong>Want to go with every recommendation?</strong> This fills in every pick on this tab, including the follow-ups. You can still change any of them before copying your reply.</p>
+      <button type="button" class="userec">Use all recommendations</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>The decisions, one at a time</h2>
+      <p>Each card says what is going on, why it is a problem, a real example, the options, and what we recommend. "Other" means you'll describe your own approach in the reply.</p>
+    </div>
+    <div class="filters" role="group" aria-label="Filter decisions by severity">
+      <button type="button" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" data-filter="crit" aria-pressed="false">Critical</button>
+      <button type="button" data-filter="warn" aria-pressed="false">Warning</button>
+      <button type="button" data-filter="info" aria-pressed="false">Info</button>
+    </div>
+    <div class="dcards">
+
+<!-- repeat: one card per decision, critical first. id="decision-D<n>". data-sev / .sev: crit | warn | info.
+     Status chip (only after a verification round): v-ok Confirmed | v-part Corrected | new New.
+     data-rec on the select = the recommended option value. One <option> per option row, then Other. -->
+<article class="dcard" id="decision-D1" data-sev="crit">
+  <div class="dcard-head"><span class="num">D1</span><h3>{{Decision title in plain words}}</h3><span class="sev crit">Critical</span><span class="chip v-ok">Confirmed</span></div>
+  <p class="thepoint">{{One or two sentences: the point, before any detail.}}</p>
+  <div class="explain">
+    <div><span class="label">What's going on</span><p>{{What each branch did, with <code>file:line</code> references. Covers <a href="#issue-1" data-goto="issues">issue 1</a>.}}</p></div>
+    <div><span class="label">Why it's a problem</span><p>{{The concrete thing that breaks if ignored.}}</p></div>
+  </div>
+  <div class="explain">
+    <div><span class="label">Example</span><pre class="code">{{The real code line, error text or payload. Escape &lt; and &amp;.}}</pre></div>
+    <!-- multi-step: a flow. Single step: <div><span class="label">Single step</span><p>No flow to draw: {{why}}.</p></div> -->
+    <div><span class="label">How it goes wrong</span><pre class="mermaid">
+flowchart LR
+  A["{{step 1}}"] --> B["{{step 2}}"]
+  B --> C["{{what breaks}}"]
+</pre></div>
+  </div>
+  <div class="table-wrap"><table class="opts">
+    <thead><tr><th>Option</th><th>What you do</th><th>What you get</th><th>Risk</th><th>Effort</th></tr></thead>
+    <tbody>
+      <!-- repeat: one row per option; class="rec" and "✓" on the recommended one -->
+      <tr class="rec"><td>1 ✓</td><td>{{The resulting code or behaviour}}</td><td>{{The outcome}}</td><td>{{What could go wrong}}</td><td><span class="effort">{{S|M|L}}</span></td></tr>
+      <tr><td>2</td><td>{{The resulting code or behaviour}}</td><td>{{The outcome}}</td><td>{{What could go wrong}}</td><td><span class="effort">{{S|M|L}}</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="recbox"><p><strong>Recommendation: option {{1}}.</strong> {{Why, in one or two sentences.}}</p>
+  <select class="pick" data-issue="D1" data-rec="1" aria-label="Pick for D1"><option value="">—</option><option>1</option><option>2</option><option value="other">Other</option></select></div>
+</article>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Small fixes and notes, no decision needed</h2>
+      <p>These have one right answer, or are only worth knowing. They are applied (or left alone) as described.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="verdicts">
+        <thead><tr><th>Item</th><th>Status</th><th>In plain words</th></tr></thead>
+        <tbody>
+          <!-- repeat. Status chip: v-ok Fix | v-part Missing a step | v-open Watch out | none Leave it -->
+          <tr><td>{{Short name}}</td><td><span class="chip v-ok">Fix</span></td><td>{{What will be done, and why there is only one right answer}}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- optional -->
+  <section>
+    <div class="section-head">
+      <h2>Follow-ups after the merge</h2>
+      <p>Found along the way. Pick what to do with each one.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="issues">
+        <thead><tr><th>#</th><th>Origin</th><th>What it is</th><th>In plain words</th><th>Action (recommended ✓)</th></tr></thead>
+        <tbody>
+          <!-- repeat: F1, F2, … Put "✓" on the recommended option label and set data-rec to its value -->
+          <tr class="issue" data-sev="ok"><td class="num">F1</td><td><span class="chip v-open">{{Pre-existing | New on SOURCE | New on TARGET}}</span></td>
+          <td><span class="title">{{Short name}}</span></td>
+          <td>{{What it is and what a user would see}}</td>
+          <td><select class="pick" data-issue="F1" data-rec="yes" aria-label="Action for follow-up F1"><option value="">—</option><option value="fix">Fix in the merge</option><option value="yes">Write up ✓</option><option value="skip">Skip</option></select></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>What happens after you decide</h2>
+    </div>
+    <pre class="mermaid">
+flowchart LR
+  P["your picks"] --> B["backup ref saved"]
+  B --> M["git merge --no-commit --no-ff {{SOURCE_BRANCH}}"]
+  M --> R["resolve markers by your choices"]
+  R --> S["apply the semantic fixes"]
+  S --> T["{{the project's test and lint commands}}"]
+  T --> H["hand off, uncommitted"]
+    </pre>
+    <div class="point">
+      <strong>Nothing is committed or pushed</strong>
+      <p>I show a summary of your picks and wait for your go-ahead. Then I save a backup ref, merge with <code>--no-commit</code>, apply your choices and run {{the project's test and lint commands}}. The result stays in the working tree for you to review. If a code path can't be exercised, I'll name it.</p>
+    </div>
+  </section>
+</div>
+
+</div>
+
+<div class="replybar" role="region" aria-label="Your reply">
+  <div class="replybar-inner">
+    <span class="label">Your reply</span>
+    <span class="whichtab" id="reply-tab">Decisions</span>
+    <code id="reply">Pick an option on the Decisions tab</code>
+    <button type="button" id="copy">Copy reply</button>
+    <span class="status" id="copy-status" aria-live="polite"></span>
+  </div>
+</div>
+
+<!-- ================= VERIFICATION ROUND TEMPLATES (inert; delete before publishing) =================
+     Round N: put the button just before the Decisions button and the panel just before the
+     Decisions panel, replace every verify-N / Verification N with the real number, fill it in,
+     then rebuild the Decisions tab. New findings continue the issue numbering (id="issue-<n>").
+     Keep the D- and F-numbers of decisions that still stand. -->
+<template id="tpl-verification-tab">
+  <button type="button" role="tab" data-tab="verify-N" data-short="Verification N" id="tab-verify-N" aria-controls="panel-verify-N" aria-selected="false">Verification N<small>{{N}} new · {{N}} corrected · {{N}} refuted</small></button>
+</template>
+
+<template id="tpl-verification-panel">
+<div role="tabpanel" data-tab="verify-N" id="panel-verify-N" aria-labelledby="tab-verify-N" hidden>
+
+  <section>
+    <div class="stats">
+      <div class="stat"><b>{{N}}</b><span>independent checks</span></div>
+      <div class="stat crit"><b>{{N}}</b><span>new findings</span></div>
+      <div class="stat warn"><b>{{N}}</b><span>earlier claims corrected</span></div>
+      <div class="stat ok"><b>{{N}}</b><span>suspicions refuted</span></div>
+    </div>
+    <div class="point ok">
+      <strong>How this round was checked</strong>
+      <p>{{What was actually run: trial merge in a throwaway worktree, which compilers, linters and test suites, what was re-checked by hand. Say that nothing in the real repository was changed.}}</p>
+    </div>
+    <!-- optional -->
+    <div class="point crit">
+      <strong>What changed most</strong>
+      <p>{{The one to three biggest corrections or new findings, in plain words.}}</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>New findings</h2>
+      <p>Things the earlier tabs missed. Each one is decided on the Decisions tab.</p>
+    </div>
+    <div class="filters" role="group" aria-label="Filter by severity">
+      <button type="button" data-filter="all" aria-pressed="true">All</button>
+      <button type="button" data-filter="crit" aria-pressed="false">Critical</button>
+      <button type="button" data-filter="warn" aria-pressed="false">Warning</button>
+      <button type="button" data-filter="info" aria-pressed="false">Info</button>
+    </div>
+    <div class="table-wrap">
+      <table class="issues">
+        <thead><tr><th>#</th><th>Severity</th><th>Finding</th><th>What's happening</th><th>Decided in</th></tr></thead>
+        <tbody>
+<!-- repeat: same row + detail pair as on the Issues tab. Chip after the severity: new (New) | up (Escalated) -->
+<tr class="issue" id="issue-{{N}}" data-sev="crit"><td class="num">{{N}}</td><td><span class="sev crit">Critical</span><span class="sub"><span class="chip new">New</span></span></td>
+<td><span class="title">{{Short finding title}}</span></td>
+<td>{{2–4 sentences with <code>file:line</code> references}}</td>
+<td><a href="#decision-D3" data-goto="decisions">D3</a></td></tr>
+<tr class="detail" data-sev="crit"><td></td><td colspan="4"><div class="detail-grid">
+<div><span class="label">Verified in the code</span><pre class="code">{{The real code or tool output}}</pre></div>
+<div><span class="label">Flow</span><pre class="mermaid">
+flowchart LR
+  A["{{step 1}}"] --> B["{{step 2}}"]
+</pre></div>
+</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Every earlier claim, checked</h2>
+      <p>One row per claim on the earlier tabs. "Holds" means it was right as written.</p>
+    </div>
+    <!-- repeat: one group per earlier tab -->
+    <span class="group-label">{{e.g. Issues tab}}</span>
+    <div class="table-wrap">
+      <table class="claims">
+        <thead><tr><th>Claim</th><th>Verdict</th><th>What we found</th></tr></thead>
+        <tbody>
+          <!-- repeat. Verdict chip: v-ok (Holds) | v-part (Corrected, Partly) | v-bad (Wrong) | v-open (Not checked) -->
+          <tr><td>{{Issue 1 | S3 | D2 | Counts}}</td><td><span class="chip v-ok">Holds</span></td><td>{{What we found}}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Refuted</h2>
+      <p>Suspicions that turned out wrong. Worth recording, because it shows where no merge effort is needed.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="verdicts">
+        <thead><tr><th>What was suspected</th><th>Verdict</th><th>Basis</th></tr></thead>
+        <tbody>
+          <!-- repeat -->
+          <tr><td>{{The suspicion}}</td><td><span class="sev ok">Refuted</span></td><td>{{The evidence, e.g. the command that was run and its result}}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- optional -->
+  <section>
+    <div class="section-head">
+      <h2>Found on the way, not caused by this merge</h2>
+      <p>Bugs that are the same on both branches. They are not merge decisions; the Decisions tab lists them as follow-ups.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="verdicts">
+        <thead><tr><th>Bug</th><th>Effect</th></tr></thead>
+        <tbody>
+          <!-- repeat -->
+          <tr><td><b>{{Short name.}}</b> {{What is wrong, with <code>names</code>.}}</td><td>{{What a user would see}}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>What we could not check</h2>
+    </div>
+    <div class="table-wrap">
+      <table class="verdicts">
+        <thead><tr><th>Item</th><th>Why</th></tr></thead>
+        <tbody>
+          <!-- repeat, or write one row: "Nothing; every claim was checked." -->
+          <tr><td>{{What stayed unverified}}</td><td>{{Why}}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+</template>
+
+<script>
+(function () {
+  var slice = function (list) { return Array.prototype.slice.call(list); };
+  var meta = {};
+  try { meta = JSON.parse(document.getElementById('review-meta').textContent) || {}; } catch (e) {}
+  slice(document.querySelectorAll('[data-meta]')).forEach(function (el) {
+    var v = meta[el.getAttribute('data-meta')];
+    if (v !== undefined) el.textContent = v;
+  });
+
+  var KEY = 'merge-review-' + meta.target + '-' + meta.source;
+  var tabs = slice(document.querySelectorAll('[role="tab"]'));
+  var panels = slice(document.querySelectorAll('[role="tabpanel"]'));
+  var decisions = document.getElementById('panel-decisions');
+  var picks = slice(decisions.querySelectorAll('select.pick'));
+  var replyEl = document.getElementById('reply');
+  var replyTabEl = document.getElementById('reply-tab');
+  var statusEl = document.getElementById('copy-status');
+
+  function save(suffix, value) { try { localStorage.setItem(KEY + suffix, value); } catch (e) {} }
+  function load(suffix) { try { return localStorage.getItem(KEY + suffix); } catch (e) { return null; } }
+
+  // The Decisions tab always reflects the latest round: the last Verification tab, or the first pass.
+  var rounds = tabs.filter(function (b) { return /^verify-/.test(b.getAttribute('data-tab')); });
+  var basisId = rounds.length ? rounds[rounds.length - 1].getAttribute('data-tab') : 'issues';
+  var basisName = rounds.length ? rounds[rounds.length - 1].getAttribute('data-short') : 'the first pass';
+  slice(document.querySelectorAll('[data-basis]')).forEach(function (el) { el.textContent = basisName; });
+
+  var decisionsTab = document.getElementById('tab-decisions');
+  var badge = document.createElement('span');
+  badge.className = 'tabbadge';
+  badge.textContent = 'Decide here';
+  decisionsTab.appendChild(badge);
+
+  function showTab(id) {
+    if (!document.getElementById('panel-' + id)) id = 'decisions';
+    tabs.forEach(function (b) {
+      var on = b.getAttribute('data-tab') === id;
+      b.setAttribute('aria-selected', String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+    panels.forEach(function (p) { p.hidden = p.getAttribute('data-tab') !== id; });
+    save(':tab:' + meta.rev, id);
+  }
+
+  tabs.forEach(function (b, i) {
+    b.addEventListener('click', function () { showTab(b.getAttribute('data-tab')); });
+    b.addEventListener('keydown', function (e) {
+      var next = null;
+      if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+      if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+      if (!next) return;
+      e.preventDefault();
+      showTab(next.getAttribute('data-tab'));
+      next.focus();
+    });
+  });
+
+  // Cross-tab links: open the tab, then scroll to the target element.
+  slice(document.querySelectorAll('a[data-goto]')).forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      showTab(a.getAttribute('data-goto'));
+      var target = document.getElementById((a.getAttribute('href') || '').replace(/^#/, ''));
+      if (target && target.scrollIntoView) target.scrollIntoView({ block: 'center' });
+    });
+  });
+
+  // Severity filters are scoped to their own section; they hide issue rows and decision cards.
+  slice(document.querySelectorAll('.filters')).forEach(function (group) {
+    var scope = group.closest('section');
+    var buttons = slice(group.querySelectorAll('[data-filter]'));
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () {
+        var f = b.getAttribute('data-filter');
+        slice(scope.querySelectorAll('tr[data-sev]:not([data-sev="ok"]), article[data-sev]')).forEach(function (el) {
+          el.hidden = !(f === 'all' || el.getAttribute('data-sev') === f);
+        });
+        buttons.forEach(function (x) { x.setAttribute('aria-pressed', String(x.getAttribute('data-filter') === f)); });
+      });
+    });
+  });
+
+  // The copied reply starts with the page revision, so Claude can tell
+  // whether this page was republished from another session.
+  function header() {
+    return '[merge-review ' + meta.source + ' → ' + meta.target + ' · rev ' + meta.rev +
+      ' · updated ' + meta.updated + ' · based on "' + basisName + '"]';
+  }
+
+  function buildReply() {
+    var parts = [];
+    var missing = 0;
+    var store = {};
+    picks.forEach(function (s) {
+      var id = s.getAttribute('data-issue');
+      store[id] = s.value;
+      if (!s.value) { missing++; return; }
+      parts.push(id + ':' + (s.value === 'other' ? 'other (…describe)' : s.value));
+    });
+    replyEl.textContent = parts.length
+      ? header() + ' ' + parts.join(' ') + (missing ? '   (' + missing + ' still open)' : '')
+      : 'Pick an option on the Decisions tab';
+    save(':picks:' + basisId, JSON.stringify(store));
+  }
+
+  // Saved picks belong to the round the decisions are based on, keyed by data-issue,
+  // so a republish that adds or reorders cards keeps them and a new round starts fresh.
+  try {
+    var saved = JSON.parse(load(':picks:' + basisId) || 'null');
+    if (saved && typeof saved === 'object') {
+      picks.forEach(function (s) {
+        var v = saved[s.getAttribute('data-issue')];
+        if (typeof v === 'string') s.value = v;
+      });
+    }
+  } catch (e) {}
+  picks.forEach(function (s) { s.addEventListener('change', buildReply); });
+
+  slice(decisions.querySelectorAll('.userec')).forEach(function (b) {
+    b.addEventListener('click', function () {
+      picks.forEach(function (s) { if (s.hasAttribute('data-rec')) s.value = s.getAttribute('data-rec'); });
+      buildReply();
+    });
+  });
+
+  document.getElementById('copy').addEventListener('click', function () {
+    var text = replyEl.textContent;
+    function selectFallback() {
+      var range = document.createRange();
+      range.selectNodeContents(replyEl);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      statusEl.textContent = 'Selected: press Ctrl/Cmd+C';
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () { statusEl.textContent = 'Copied'; }, selectFallback);
+    } catch (e) { selectFallback(); }
+  });
+
+  if (replyTabEl) replyTabEl.textContent = 'Decisions · rev ' + meta.rev;
+  showTab(load(':tab:' + meta.rev) || 'decisions');
+  buildReply();
+})();
+</script>
