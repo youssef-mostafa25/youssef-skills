@@ -7,17 +7,24 @@ description: Use when the user says to start a job, take one on, move to the nex
 
 ## Overview
 
-A job is not a code change. A job is **one proposal per task, presented and approved
-before any implementation file is touched, tracked on a published HTML board that is
-updated in the same turn as every status change.**
+The work is tracked on a **board**: every task gets its own proposal, approved before
+any implementation file is touched, on a published HTML page updated in the same turn
+as every status change.
+
+A **job** is a group of tasks from the Queue that are implemented together, in one
+sitting, as one change the user can read, understand and review afterwards. Grouping
+pays for the reading once and turns several small diffs into one coherent one.
 
 **The rule: nothing is implemented until the user says yes, in words, to that specific
-task.** A thumbs-up on another task, silence, or your own confidence that the fix is
-obvious are not approval.
+task** — naming the task, or naming the job that contains it. A thumbs-up on another
+task or job, silence, or your own confidence that the fix is obvious are not approval.
 
 ## When to use
 
 - The user says "start a job", "take the next job", "let's work on X", "plan this out".
+  No board yet → build one (steps 1–3), then take job 1. A board exists → take the
+  top job on its Jobs tab. A board with no Jobs tab (made before jobs) → run step 3 on
+  it first, adding the Jobs panel and the Job column from `template.html`.
 - Any work with 2+ tasks that will be worked over more than one turn.
 - The user asks for a plan, or asks what is wrong with something and what it would take to fix.
 
@@ -27,22 +34,27 @@ work already approved on an existing board (update that board instead of making 
 ## The loop
 
 ```
-user says "start a job"
+user says "start a job" / "take the next job"
   |
   v
-1 INVESTIGATE (read-only)  --> 2 PUBLISH SKELETON (tasks Open, link in chat)
+1 INVESTIGATE (read-only) --> 2 PUBLISH SKELETON --> 3 GROUP the Queue into jobs
+  |                            (tasks Open)          (Jobs tab, job on each Queue row)
+  v
+4 PRESENT the next job: job header + one proposal per task in it
+  + move those tasks to "Plan submitted" (same turn)
   |
   v
-3 PRESENT proposals in chat + move every task to "Plan submitted" (same turn)
-  |
-  v
-4 STOP and wait  --(user approves task #N, in words)--> 5 Approved --> implement
-  |                                                          |
-  |<--(user rejects)-- back to Open                          v
-                                                    6 verify --> Fixed
-                                                          |
-                                                          v
-                                            update board in the SAME turn
+5 STOP and wait --(user approves the job or tasks, in words)--> Approved
+  |                                                                 |
+  |<--(task rejected)-- back to Open, out of the job                v
+                                           6 IMPLEMENT the job's approved tasks together
+                                                                    |
+                                                                    v
+                                           7 VERIFY each task --> Fixed
+                                                                    |
+                                                                    v
+                                           8 JOB REVIEW in chat + on the Jobs tab
+                                             (board updated in the SAME turn as each move)
 ```
 
 **Step 1 — investigate.** Read anything. Run read-only checks: greps, a throwaway probe
@@ -53,16 +65,85 @@ what the user told you — if the premise does not hold, say so instead of propo
 **Step 2 — publish the skeleton** if the investigation runs longer than a couple of tool
 calls, so the user has something to watch. Tasks start at `Open`. Give them the link once.
 
-**Step 3 — present.** One proposal per task, in chat, under the seven headings below.
-Never one proposal covering several tasks — the board tracks tasks, and a merged plan
-leaves the others with no recorded decision. In the same turn, set every task to
-`Plan submitted` with its effort and risk letters on the row.
+**Step 3 — group.** Split the Queue into jobs using the rules in *Forming jobs* below.
+Fill the Jobs tab and the Job column on the Queue. Rank jobs, not just tasks. Effort and
+risk for jobs not yet presented are provisional — mark them `~M · ~Low` until their
+proposals are written.
 
-**Step 4 — stop.** Approval is per task. Ask for the lane exception here too (below), once
-per job, naming every directory the job reaches.
+**Step 4 — present the next job.** Start with the job header (below), then one proposal
+per task in the job, in chat, under the seven headings. Never one proposal covering
+several tasks — the board tracks tasks, and a merged plan leaves the others with no
+recorded decision. In the same turn, set every task in the job to `Plan submitted` with
+its effort and risk letters on the row, and the job to `Plan submitted`.
 
-**Step 6 — verify before claiming Fixed.** Run the checks and quote what they printed.
-Not after writing the code — after proving it.
+**Step 5 — stop.** The user may approve the whole job in one reply ("approve job B") or
+task by task. Approving a job approves its tasks; it does **not** answer their Legacy
+questions — each still needs its own answer before that point is implemented. A task they reject or park leaves the job (back to `Open`, or `Deferred`)
+and the job goes ahead without it; re-check that the rest still makes sense together.
+Ask for the lane exception here too (below), once per job, naming every directory the
+job reaches.
+
+**Step 6 — implement the job.** All of the job's approved tasks, in the order the job
+header gave. Every hunk belongs to exactly one task — no edit that serves none of them,
+no "while I was here" cleanups. Reviewability is the deliverable.
+
+**Step 7 — verify before claiming Fixed.** Run the checks for each task and quote what
+they printed. Not after writing the code — after proving it.
+
+**Step 8 — job review.** Hand the change back in the shape in *Job review* below, and
+put its one-line version in the job's Review cell. The job reaches `Fixed` when every
+task in it has.
+
+## Forming jobs
+
+A job is a set of Queue tasks that **share the reading and tell one story in the diff**.
+Put tasks in the same job when they:
+
+- touch the same files or the same seam (one module, one request path, one component), or
+- are the same kind of fix in neighbouring code (the same missing guard in three handlers).
+
+Keep a job reviewable in one sitting:
+
+- **One lane.** A job does not cross a service boundary. Backend and frontend fixes
+  for the same symptom are two jobs, the first noted as unblocking the second.
+- **About five tasks or fewer**, and a diff a reviewer can read top to bottom.
+- **A High-risk or L-effort task is a job of its own.** Its rollback plan and real-data
+  check must not be buried in someone else's diff.
+- **A task waiting on a design decision** stays out of a job until the decision is made.
+- **A task that fits nowhere is a job of one.** Never force a group.
+
+**Rank jobs** by the highest-ranked task in each. Pulling a lower-ranked task forward
+because it shares files with a top task is the point of a job — mark it on the Queue row
+("pulled into job A") so the user sees why the order moved.
+
+### The job header
+
+Before the task proposals, in chat:
+
+1. **Tasks** — the task numbers and one line each.
+2. **Why together** — the files or seam they share, concretely.
+3. **Files touched** — every file the job will edit.
+4. **Order** — the order the tasks will be implemented, and why if it matters
+   (task 05's guard first so 01's change has a non-empty list to work on).
+5. **Effort · Risk** — of the job as a whole: the highest of its tasks, plus anything the
+   combination adds.
+
+### Job review
+
+After implementation, before anything else, give the user what they need to review the
+change without re-deriving it:
+
+1. **What changed, per task** — task number → `file:line` ranges it touched, one line on
+   what each hunk does. A hunk that serves two tasks is listed under both and said so.
+2. **Read it in this order** — the file or hunk to start from, and the path through the
+   rest.
+3. **Proof** — per task, the check that was run and what it printed.
+4. **Review commands** — the work is uncommitted, so give `git diff -- <files>` for the
+   job. Where a file belongs to one task, list that command under the task so it can be
+   read alone; where tasks share a file, the line ranges from item 1 mark whose hunk is
+   whose.
+5. **What did not change** — anything the user might expect to be touched and was not, and
+   any task that left the job.
 
 ## The seven headings
 
@@ -133,7 +214,9 @@ done". Every move updates **three things together**:
    will silently disagree with the rows if you skip them.
 
 The **Queue** is maintained too: a task that reaches Fixed leaves it and the ranks close
-up. If fixing one task changes another's priority, say so and re-rank.
+up. If fixing one task changes another's priority, say so and re-rank. The **Jobs** tab
+moves with it: a task leaving a job is removed from that job's row, and a finished job
+keeps its row with its review.
 
 **Republish to the same URL** (pass the artifact's `url`) so the link keeps working. If
 the board and the code disagree, everyone downstream is working from the wrong map.
@@ -153,17 +236,20 @@ and being told once is not permission for the next time.
 Copy `template.html` (next to this SKILL.md) and fill it in. It is a single self-contained file: tabs, status
 pills, filter chips and tally, light and dark, works at phone width.
 
-**Scale the tabs to the job.** The template ships four; delete what the job does not need,
-and add the last two by copying the Queue panel and changing its id.
+**Scale the tabs to the board.** The template ships five; delete what the board does not need,
+and add Method by copying the Queue panel and changing its id.
 
 | Tab | In template | Keep / add it when |
 |---|---|---|
 | Before you start | yes | Always. It is the protocol the user and the next agent read. |
-| Queue | yes | Always. Open tasks in rank order — severity weighted by reach, certainty and cost. |
+| Jobs | yes | Always. Every job in rank order: its tasks, why they are together, files touched, effort · risk, and the review once it is done. |
+| Queue | yes | Always. Open tasks in rank order — severity weighted by reach, certainty and cost — with the job each belongs to. |
 | Tasks | yes | Always. Every task, grouped by area, with the status filter chips. |
 | Manual tests | yes | Only when something needs a browser, a real provider, or a judgement call. |
-| Jobs | add | Only when the tasks group into more than one sitting, so the reading is paid for once. |
 | Method | add | Only when how the task list was produced is itself worth recording. |
+
+A job's pill is the least-advanced status among its tasks still in it, and moves when
+theirs do.
 
 A tab's count in the nav (`<span class="c">`) is hand-maintained like the tally.
 
@@ -176,9 +262,14 @@ the link once, in one line.
 ## Red flags — stop
 
 - About to edit an implementation file for a task that is not `Approved`.
-- Writing one proposal that covers several tasks.
+- Writing one proposal that covers several tasks — a job has a header plus one proposal
+  per task, never a merged plan.
+- Implementing a task that is not in the job being worked, or an edit that serves no
+  task in it.
+- Putting a High-risk task, or tasks from two lanes, in one job.
+- Finishing a job without the job review.
 - Heading 7 says "removing the old path" without the user having answered.
 - A status changed in the code but not on the board this turn.
 - Marking `Fixed` before running the verification.
 - Editing a directory outside the lane because the fix was small.
-- Publishing a second board when one already exists for this job.
+- Publishing a second board when one already exists for this work.

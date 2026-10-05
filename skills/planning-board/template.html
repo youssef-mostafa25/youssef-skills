@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<!-- TITLE: two to four words naming THIS job. Not "Job: explainer". -->
+<!-- TITLE: two to four words naming THIS board. Not "Board: explainer". -->
 <title>Planning Board</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
@@ -217,10 +217,10 @@
      ============================================================ -->
 <header class="mast">
   <div>
-    <p class="eyebrow">JOB NAME · DATE</p>
+    <p class="eyebrow">BOARD NAME · DATE</p>
     <h1>Board Title</h1>
-    <p class="sub">One or two sentences: what this job is, and what was read to produce the task list.</p>
-    <p class="sub"><strong>Taking a task? Read <em>Before you start</em> first.</strong> Every task gets a written proposal — issue, why, fix, gain, effort, risk, legacy — approved before any implementation file is touched, and this board is updated as each task moves.</p>
+    <p class="sub">One or two sentences: what this board covers, and what was read to produce the task list.</p>
+    <p class="sub"><strong>Taking a job? Read <em>Before you start</em> first.</strong> Tasks are worked in jobs — groups implemented together and reviewed as one change. Every task gets a written proposal — issue, why, fix, gain, effort, risk, legacy — approved before any implementation file is touched, and this board is updated as each task moves.</p>
     <div class="meta">
       <span><b>Repo</b> name</span>
       <span><b>Branch</b> branch-name</span>
@@ -235,10 +235,11 @@
   </div>
 </header>
 
-<!-- Delete any tab that this job does not need, and its panel with it.
-     Keep: Before you start, Queue, Tasks. Optional: Jobs, Manual tests, Method. -->
+<!-- Delete any tab that this board does not need, and its panel with it.
+     Keep: Before you start, Jobs, Queue, Tasks. Optional: Manual tests, Method. -->
 <nav class="tabs" role="tablist" aria-label="Sections">
   <button class="tab" role="tab" id="tab-proto" aria-controls="p-proto" aria-selected="true">Before you start <span class="c">read first</span></button>
+  <button class="tab" role="tab" id="tab-jobs" aria-controls="p-jobs" aria-selected="false">Jobs <span class="c">2</span></button>
   <button class="tab" role="tab" id="tab-queue" aria-controls="p-queue" aria-selected="false">Queue <span class="c">3</span></button>
   <button class="tab" role="tab" id="tab-tasks" aria-controls="p-tasks" aria-selected="false">Tasks <span class="c">3</span></button>
   <button class="tab" role="tab" id="tab-tests" aria-controls="p-tests" aria-selected="false">Manual tests <span class="c">1</span></button>
@@ -248,11 +249,11 @@
 <!-- ========== BEFORE YOU START ========== -->
 <div class="panel" id="p-proto" role="tabpanel" aria-labelledby="tab-proto">
 
-  <p class="lede">If you have been asked to work on a task from this board, <strong>this page is the job — not the code change</strong>. You investigate one task, write a proposal in the shape below, update that task's row, and <strong>come back for approval before touching any implementation file</strong>.</p>
+  <p class="lede">If you have been asked to work on this board, <strong>this page is the work — not the code change</strong>. You take the top job on the <em>Jobs</em> tab, write a proposal for each of its tasks in the shape below, update their rows, and <strong>come back for approval before touching any implementation file</strong>.</p>
 
   <div class="note warn">
     <h3>The rule</h3>
-    <p><b>No implementation before an approved plan.</b> One task at a time. Read the task, read the code it cites, write the proposal, set the row to <span class="pill plan">Plan submitted</span>, and stop. Approval is the user saying so, in words — a silence, a thumbs-up on something else, or your own confidence that the fix is obvious are not approval.</p>
+    <p><b>No implementation before an approved plan.</b> One job at a time. Read its tasks, read the code they cite, write the job header and one proposal per task, set the rows to <span class="pill plan">Plan submitted</span>, and stop. Approval is the user saying so, in words, naming the task or its job — a silence, a thumbs-up on something else, or your own confidence that the fix is obvious are not approval.</p>
     <p>Two things you <em>may</em> do without asking, because they are how the proposal gets written: <b>read anything</b>, and <b>run read-only checks</b> — greps, a throwaway probe in a scratch directory, a test suite that already exists. What you may not do is edit a file the fix would touch, or leave a scratch file behind in the repo.</p>
     <p><b>If the task turns out to be wrong, say that instead of proposing a fix.</b> A proposal that opens "this does not hold, here is why" is a good outcome and finishes the task — set the row to <span class="pill refuted">Refuted</span> or <span class="pill byd">By design</span> with the evidence.</p>
   </div>
@@ -276,6 +277,12 @@
   <div class="note warn">
     <h3>Legacy is the user's decision, not yours</h3>
     <p><b>There is no default.</b> Do not assume the old path is removed, and do not assume it is kept. Heading 7 states what the legacy logic is, what is lost without it, and which way you would go — and then <b>stops and asks</b>. Nothing is implemented on that point until the answer arrives in words.</p>
+  </div>
+
+  <div class="note">
+    <h3>Work in jobs, hand back a reviewable change</h3>
+    <p>A <b>job</b> is a group of Queue tasks that share files or a seam and are implemented together. One lane per job, about five tasks or fewer; a High-risk or L-effort task is a job of its own. Before the proposals, give the <b>job header</b>: tasks, why together, files touched, order, effort · risk.</p>
+    <p>Every hunk belongs to exactly one task. After implementing, give the <b>job review</b>: what changed per task with <code>file:line</code>, the order to read it in, the proof per task, a <code>git diff -- &lt;files&gt;</code> per task, and what deliberately did not change.</p>
   </div>
 
   <div class="note">
@@ -315,16 +322,33 @@
 </div>
 
 
+<!-- ========== JOBS ==========
+     One row per job, in rank order (a job ranks by its highest-ranked task).
+     The job's pill is the least-advanced status among its tasks; finished jobs keep
+     their row and their review. -->
+<div class="panel" id="p-jobs" role="tabpanel" aria-labelledby="tab-jobs" hidden>
+  <p class="lede">Tasks are worked in <strong>jobs</strong>: groups that share files or a seam, implemented together and handed back as one change the user can review in one sitting. Take the top job that is not <span class="pill fixed">Fixed</span>.</p>
+
+  <div class="tw"><table>
+    <thead><tr><th>Job</th><th>Status</th><th>Tasks &amp; why together</th><th>Files touched</th><th>Effort · Risk</th><th>Review</th></tr></thead>
+    <tbody>
+      <tr class="s-open"><td class="id">A</td><td class="st"><span class="pill open">Open</span></td><td class="what"><span class="d">01, 03 — one line naming what the job fixes.</span><span class="f">Why these belong together: the file or seam they share.</span></td><td class="loc"><b>file.py</b><br>other_file.ts</td><td class="ev">—</td><td class="ev">After implementation: per-task <code>file:line</code>, read order, proof, <code>git diff -- &lt;files&gt;</code>.</td></tr>
+      <tr class="s-open"><td class="id">B</td><td class="st"><span class="pill open">Open</span></td><td class="what"><span class="d">02 — a job of one.</span><span class="f">Why it stands alone: High risk, another lane, or nothing shares its files.</span></td><td class="loc"><b>file.go</b></td><td class="ev">—</td><td class="ev">—</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+
 <!-- ========== QUEUE ========== -->
 <div class="panel" id="p-queue" role="tabpanel" aria-labelledby="tab-queue" hidden>
   <p class="lede">Open tasks in the order they are meant to be worked. <strong>Rank is not severity</strong> — it is severity weighted by how much of the product the task actually reaches, how certain the diagnosis is, and how cheap the fix is. A task that reaches <span class="pill fixed">Fixed</span> leaves this tab and the ranks below close up.</p>
 
   <div class="tw"><table>
-    <thead><tr><th>Rank</th><th>#</th><th>Status</th><th>Task</th><th>Lane</th><th>Effort · Risk</th></tr></thead>
+    <thead><tr><th>Rank</th><th>#</th><th>Status</th><th>Task</th><th>Job</th><th>Lane</th><th>Effort · Risk</th></tr></thead>
     <tbody>
-      <tr class="s-open"><td class="id">1</td><td class="id">01</td><td class="st"><span class="pill open">Open</span></td><td class="what"><span class="d">One line naming the task.</span></td><td class="loc">dir/</td><td class="ev">—</td></tr>
-      <tr class="s-open"><td class="id">2</td><td class="id">02</td><td class="st"><span class="pill open">Open</span></td><td class="what"><span class="d">One line naming the task.</span></td><td class="loc">dir/</td><td class="ev">—</td></tr>
-      <tr class="s-open"><td class="id">3</td><td class="id">03</td><td class="st"><span class="pill open">Open</span></td><td class="what"><span class="d">One line naming the task.</span></td><td class="loc">dir/</td><td class="ev">—</td></tr>
+      <tr class="s-open"><td class="id">1</td><td class="id">01</td><td class="st"><span class="pill open">Open</span></td><td class="what"><span class="d">One line naming the task.</span></td><td class="id">A</td><td class="loc">dir/</td><td class="ev">—</td></tr>
+      <tr class="s-open"><td class="id">2</td><td class="id">02</td><td class="st"><span class="pill open">Open</span></td><td class="what"><span class="d">One line naming the task.</span></td><td class="id">B</td><td class="loc">dir/</td><td class="ev">—</td></tr>
+      <tr class="s-open"><td class="id">3</td><td class="id">03</td><td class="st"><span class="pill open">Open</span></td><td class="what"><span class="d">One line naming the task.</span><span class="f">Pulled into job A: shares file.py with 01.</span></td><td class="id">A</td><td class="loc">dir/</td><td class="ev">—</td></tr>
     </tbody>
   </table></div>
 </div>

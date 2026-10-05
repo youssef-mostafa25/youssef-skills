@@ -1,7 +1,7 @@
 {
   "name": "youssef-skills",
-  "description": "Youssef Mostafa's Claude Code skills in one place: planning-board (approval-gated job planning with a live status board), merge-assistant (git merges planned up front: parallel branch analysis, semantic-conflict detection and a tabbed decision review), handoff (verified, cumulative session handoff docs), debug-log-sink (ephemeral localhost log collector with verified cleanup) and sha3bolly (junior-engineer explanation style).",
-  "version": "1.3.0",
+  "description": "Youssef Mostafa's Claude Code skills in one place: planning-board (approval-gated planning with a live status board, tasks grouped into reviewable jobs), merge-assistant (git merges planned up front: parallel branch analysis, semantic-conflict detection and a tabbed decision review), handoff (verified, cumulative session handoff docs), debug-log-sink (ephemeral localhost log collector with verified cleanup) and sha3bolly (junior-engineer explanation style).",
+  "version": "1.4.0",
   "author": {
     "name": "Youssef Mostafa"
   },

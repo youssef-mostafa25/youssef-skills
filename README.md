@@ -8,11 +8,15 @@ My Claude Code skills, collected in one plugin. Once installed they show up as
 Turns "start a job" into a disciplined loop:
 
 ```
-investigate (read-only) --> publish board --> one proposal per task
-      --> wait for approval in words --> implement --> verify --> mark Fixed
+investigate (read-only) --> publish board --> group the Queue into jobs
+      --> next job: header + one proposal per task --> wait for approval in words
+      --> implement the job together --> verify --> job review --> mark Fixed
 ```
 
-Every status change is reflected on a published HTML board in the same turn.
+A **job** is a group of Queue tasks that share files or a seam, implemented together
+and handed back as one change you can review in one sitting: what changed per task
+(`file:line`), the order to read it in, the proof, and a `git diff` per task. Every
+status change is reflected on a published HTML board in the same turn.
 
 ## merge-assistant
 
@@ -63,7 +67,7 @@ checks staged changes before any commit and refuses if debug calls are present.
 
 | Skill | What it does |
 |---|---|
-| `planning-board` | The job loop: seven-heading proposals (Issue, Why, Fix, Gain, Effort, Risk, Legacy), per-task approval, status lifecycle, and the board template (`template.html`). |
+| `planning-board` | The job loop: Queue tasks grouped into reviewable jobs, seven-heading proposals per task (Issue, Why, Fix, Gain, Effort, Risk, Legacy), approval per task or per job, a job review after implementation, status lifecycle, and the board template (`template.html`). |
 | `merge-assistant` | Merge planning: parallel branch analysis, semantic-conflict detection, a tabbed review artifact with per-decision pickers (`merge-review-template.html`), then a `--no-commit` merge driven by your decisions. |
 | `handoff` | Session handoff docs: grounded in `git` and real test runs, cumulative across sessions, with exact `file:line` references and copy-pasteable verification commands. |
 | `debug-log-sink` | Ephemeral cross-process debug logging: bundled stdlib collector (`debug-log-sink.py`), greppable `DEBUG_LOG_SINK` markers, a pre-commit guard, and two-tier cleanup verified by `git grep`. |
