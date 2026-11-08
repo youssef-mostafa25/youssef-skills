@@ -1,141 +1,8 @@
 # youssef-skills
 
-My Claude Code skills, collected in one plugin. Once installed they show up as
-`youssef-skills:<skill>` — for example `youssef-skills:planning-board`.
-
-## planning-board
-
-Turns "start a job" into a disciplined loop:
-
-```
-investigate (read-only) --> ask every question in one round --> publish board
-      --> group the Queue into jobs
-      --> next task / job / PR: one proposal per task --> wait for approval in words
-      --> implement ONE job (or one task) --> verify --> review --> mark Fixed --> stop
-```
-
-Every question the plan needs (which tasks, legacy, approach choices, lanes, the stack)
-is asked in one round before the board exists, so every task on the board is ready to
-implement and only needs your approval. All PR configs on the board stay collapsed.
-
-How much gets planned follows what you say: **"onto the next task"** plans one task,
-**"onto the next job"** every task in the job, **"onto the next PR"** every task in every
-job of that PR. Implementation never goes past one job: after each job (or task) you get
-its review, and the next one starts only when you say go on, unless you explicitly tell
-it not to stop.
-
-Every board has a **PRs tab**: which PR each job lands in, and whether each PR is
-**independent** (branches from the base, targets it, merges in any order) or
-**stacked** (targets the PR below it, merges in order). It opens with an overview table
-and a line per PR on why it is independent or what it builds on, then draws each chain
-under its base. Every PR has a copyable config from the start: head and target branch,
-title, the `git switch -c --no-track` command, draft and merge method. The branch never
-tracks its base, so a push or editor Sync cannot land a PR's commits on the base itself.
-
-One PR or independent PRs are the agent's call, stated in one line. When the plan is big
-and splits cleanly, the agent may propose a **stacked PR**: the jobs cut into an ordered
-chain of PRs, each targeting the branch below it, shown with the jobs in each PR and an
-ASCII drawing of the stack. You decide; without your yes there is no stack. When a PR's
-last job is reviewed, stacked or not, the agent gives you the PR's short config in chat
-(head and target branch, title, draft, merge method, and labels or reviewers when the
-repo shows them), each part in its own block for copying, plus the next branch name. The
-PR body is written on the board's PRs tab with a Copy button, not in chat. PR 1 of a
-stack opens its body with an overview of the whole stack and what each PR is responsible
-for. A stacked PR stays a draft until every PR it builds on is merge-ready or the whole
-stack is complete, and the agent tells you when to mark one ready for review; an
-independent PR is never a draft. It never branches, commits, pushes or opens the PR itself.
-
-When `main` moves, the stack is left alone unless a read-only probe shows a conflict,
-the repo requires up-to-date branches, or a PR landed by squash. Then the stack is synced
-by **merging** (rebasing only when you ask), one PR at a time from the bottom up, each
-through merge-assistant: a full run for `main` into PR 1, and a lighter propagation run
-for each PR above it. Every link is verified before the next one starts. A PR in the
-middle that needs a new commit is synced first, then gets the commit, then the PRs above
-it are synced.
-
-When tasks come from tracked issues, the board also has an **Issues tab**: every issue,
-with its title and state read from the tracker, mapped to its tasks, jobs and PRs, and
-a "No issue" group saying where every other task came from (a side catch, your request,
-a PR review). The Jobs and Queue tables carry an Issue column. A PR body says
-`Closes #n` only when that PR finishes all of #n; otherwise `Refs #n`, and the board
-warns when a PR would close an issue early or when a closed issue's bug still
-reproduces.
-
-A **job** is a group of Queue tasks that share files or a seam, implemented together
-and handed back as one change you can review in one sitting: what changed per task
-(`file:line`), the order to read it in, the proof, and a `git diff` per task. Every
-status change is reflected on a published HTML board in the same turn.
-
-## merge-assistant
-
-Plans a git merge before touching anything:
-
-```
-preflight --> merge base --> 3 parallel analysts (source, target, cross-diff)
-      --> tabbed merge review artifact --> your picks --> merge --no-commit --> verify
-```
-
-It looks for semantic conflicts that merge cleanly but break at runtime, not only
-conflict markers. The review page has one tab each for the source branch, the
-target branch, the combined view, the issues, every verification round, and the
-decisions. Only the Decisions tab has pickers, and the copied reply carries the
-page revision. Nothing is committed or pushed without your say-so.
-
-## handoff
-
-Writes a `<TOPIC>_HANDOFF.md` at the repo root when you pause work, so a fresh
-session (or a teammate) can resume with nothing but that file and the repo:
-
-```
-git status / log / tests (real state) --> fold in any earlier handoff
-      --> write ✅/⚠️ TL;DR, decisions, dead-ends, next steps, verify commands
-```
-
-Every claim is checked against the repo first; anything not checked is marked
-unverified. A new handoff on the same topic replaces the old one and carries its
-history forward.
-
-## debug-log-sink
-
-For bugs that ordinary console output can't show: several processes, hidden
-stdout, frontend ↔ backend timing. It runs a tiny loopback-only HTTP collector that
-writes every call into one `debug-log-sink.log` at the repo root:
-
-```
-git-ignore debug-log-sink.* (first use) --> start sink --> add marked log calls
-      --> debug --> commit guard / teardown --> grep proves nothing is left
-```
-
-On first use in a repo it adds `debug-log-sink.*` to `.gitignore` and leaves it there
-permanently, so you should commit that line. The log calls in your source files are
-not covered by `.gitignore`, so don't commit while a session is active. The skill
-checks staged changes before any commit and refuses if debug calls are present.
-
-## resolve-claude-pr-review
-
-Works through a review that the claude[bot] reviewer left on a pull request:
-
-```
-read threads --> verify each finding (holds / refuted / by design)
-      --> one proposal per finding --> failing test, then fix --> you commit and push
-      --> reply on and resolve each thread --> one closing PR comment
-```
-
-Each finding is handled through planning-board, so it gets a seven-heading proposal and
-a task on the board. Threads are resolved only after the fix is pushed, and each reply
-names the commit. The PR description is never edited; the closing comment records what
-the review changed, the tests that fail on the old code, and anything left as is.
-
-## Skills
-
-| Skill | What it does |
-|---|---|
-| `planning-board` | The job loop: Queue tasks grouped into reviewable jobs, seven-heading proposals per task (Issue, Why, Fix, Gain, Effort, Risk, Legacy), approval per task or per job, a job review after implementation, a PRs tab on every board (independent and stacked PRs, each with a copyable config; a stack only with your yes), status lifecycle, and the board template (`template.html`). |
-| `merge-assistant` | Merge planning: parallel branch analysis, semantic-conflict detection, a tabbed review artifact with per-decision pickers (`merge-review-template.html`), then a `--no-commit` merge driven by your decisions. Also syncs planning-board's stacked PRs (Stack mode: full run for the base, verified propagation runs up the stack). |
-| `handoff` | Session handoff docs: grounded in `git` and real test runs, cumulative across sessions, with exact `file:line` references and copy-pasteable verification commands. |
-| `debug-log-sink` | Ephemeral cross-process debug logging: bundled stdlib collector (`debug-log-sink.py`), greppable `DEBUG_LOG_SINK` markers, a pre-commit guard, and two-tier cleanup verified by `git grep`. |
-| `resolve-claude-pr-review` | claude[bot] PR reviews: findings verified against the code, one planning-board proposal each, fixed test-first, answered and resolved per thread after the push, then one closing PR comment. Needs the `gh` CLI. |
-| `sha3bolly` | The explanation style proposals are written in: plain words, always a concrete example, a flowchart when steps chain. `planning-board` and `merge-assistant` depend on it, so it ships here. Created by [Habiba Abueldahab](https://github.com/abueldahabh) — original at [abueldahabh/sha3bolly](https://github.com/abueldahabh/sha3bolly), MIT licensed ([`skills/sha3bolly/LICENSE`](skills/sha3bolly/LICENSE)). |
+My Claude Code skills, in one plugin. Once it's installed, just talk to Claude
+normally. Each skill starts when what you say matches it, or you can call one by name,
+such as `/youssef-skills:planning-board`.
 
 ## Install
 
@@ -144,34 +11,60 @@ the review changed, the tests that fail on the old code, and anything left as is
 /plugin install youssef-skills@youssef-skills
 ```
 
-## Requirements (planning-board, merge-assistant)
+To update later:
 
-Both skills publish a page with Claude Code's `Artifact` tool: planning-board its
-status board, merge-assistant its merge review. The tool is available when Claude
-Code is signed in to a claude.ai account with Artifacts enabled. Without it,
-planning-board's proposals and approval loop still work; only the board does not.
-merge-assistant delivers its findings and decision pickers on that page, so it
-needs the tool.
+```
+/plugin marketplace update youssef-skills
+/plugin update youssef-skills@youssef-skills
+```
 
-## Usage
+## The skills
 
-For planning-board, say "start a job", "take the next job", or "plan this out before you change anything".
+| Skill | Use it to… | Try saying |
+|---|---|---|
+| [planning-board](skills/planning-board/README.md) | Plan multi-task work, approve each task before any code changes, and track it all on a live board. Big plans can be split into PRs. | "start a job", "onto the next PR" |
+| [merge-assistant](skills/merge-assistant/README.md) | Merge branches safely: every conflict, including the ones that merge cleanly but break, decided by you up front. Can also take a finished PR stack through Claude's review, one PR at a time. | "merge my feature into main", "run the stack through Claude's review" |
+| [resolve-claude-pr-review](skills/resolve-claude-pr-review/README.md) | Check, fix, answer and resolve the comments Claude's reviewer left on a PR. | "fix claude's review on #123" |
+| [handoff](skills/handoff/README.md) | Save where you are, so another session or a teammate can pick it up. | "write a handoff" |
+| [debug-log-sink](skills/debug-log-sink/README.md) | Collect debug logs from processes whose output you can't see, then clean up every trace. | "I can't see the worker's logs" |
+| [sha3bolly](skills/sha3bolly/README.md) | Get explanations in plain words, with a real example and a flowchart. | "I don't understand", "explain again" |
 
-For merge-assistant, say "merge my feature into main", "bring my branch up to date with main", or "help me resolve these merge conflicts".
+## How they fit together
 
-For debug-log-sink, say "I can't see the worker's logs", "correlate frontend and backend logs", or "remove the debug logs".
+```
+planning-board ──plans and tracks──> your PRs
+      │                                  │
+      ├─ keeps stacked PRs in sync ──> merge-assistant
+      │                                  │
+      │                                  └─ review loop ──> resolve-claude-pr-review
+      │
+      └─ Claude review comments ──────> resolve-claude-pr-review
+```
 
-For handoff, say "write a handoff", "hand this off", or "I'll continue in another session".
+All of them explain things in the sha3bolly style.
 
-For resolve-claude-pr-review, say "fix claude's review on #123" or "resolve the bot's comments".
+## Things that stay in your hands
+
+- **You approve every plan and decision** before Claude acts on it.
+- **You commit and push.** These skills leave work uncommitted and never push for you.
+
+## Requirements
+
+- **planning-board** and **merge-assistant** publish a web page (the board, the merge
+  review). That needs Claude Code signed in to a claude.ai account with Artifacts
+  enabled. Without it, planning-board still works but without the board.
+  merge-assistant needs the page, because that's where you make your choices.
+- **resolve-claude-pr-review** and merge-assistant's review loop need the
+  [`gh` CLI](https://cli.github.com/) signed in to your GitHub account.
+- **debug-log-sink** needs Python 3.
 
 ## Adding a skill
 
-Drop a folder with a `SKILL.md` into `skills/`, bump `version` in
-`.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`, push, then run
-`/plugin marketplace update youssef-skills`.
+Add a folder under `skills/` with a `SKILL.md` (for Claude) and a `README.md` (for
+people), and link it in the table above. Then bump `version` in
+`.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` and push.
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE). The bundled `sha3bolly` skill is © Habiba Abueldahab,
+MIT, see [`LICENSE`](LICENSE). The bundled `sha3bolly` skill is © Habiba Abueldahab,
 MIT licensed separately under [`skills/sha3bolly/LICENSE`](skills/sha3bolly/LICENSE).
