@@ -1,6 +1,6 @@
 ---
 name: merge-assistant
-description: Guide safe git branch merges by analyzing what changed on each branch in parallel, surfacing not just textual conflicts but also semantic and logical issues that silently break things, getting the user's decision on every issue upfront, then executing the merge with those decisions baked in. Use this whenever the user wants to merge git branches together — phrasings like "merge my feature into main", "combine these branches", "bring my branch up to date with main", "help me resolve merge conflicts", or any request involving git merge planning. Strongly prefer this skill over a quick `git merge` for any non-trivial merge. Also used by planning-board to keep a stacked PR in sync (Stack mode).
+description: Guide safe git branch merges by analyzing what changed on each branch in parallel, surfacing not just textual conflicts but also semantic and logical issues that silently break things, getting the user's decision on every issue upfront, then executing the merge with those decisions baked in. Use this whenever the user wants to merge git branches together — phrasings like "merge my feature into main", "combine these branches", "bring my branch up to date with main", "help me resolve merge conflicts", or any request involving git merge planning. Strongly prefer this skill over a quick `git merge` for any non-trivial merge. Also used by planning-board to keep a stacked PR in sync (Stack mode), and when a finished, tested stacked PR should go through Claude's PR review one PR at a time, rebased on its base first ("run the stack through Claude's review", Review loop mode).
 ---
 
 # Merge Assistant
@@ -497,6 +497,96 @@ results. If a check fails, stop and say so. The caller does not start the next l
 
 ---
 
+## Review loop mode (large stacked PRs)
+
+Use it when a large change, split into stacked PRs, is complete and tested, and the user
+wants each PR rebased on its base and put through Claude's PR review, one PR at a time
+from the bottom. Phrasings: "run the stack through Claude's review", "rebase and review
+each PR", "review loop".
+
+**Before the first PR**, check all of these, and stop and say which one fails:
+
+- Every PR in the stack is open on GitHub (it has a number) and has had its handoff, and
+  its whole suite passed on its current tip. Take these from the board's PR rows, or ask
+  the user to confirm them. Don't assume them.
+- The working tree is clean.
+- Each branch's upstream is none or `origin/<its own name>`
+  (`git rev-parse --abbrev-ref <branch>@{upstream}`).
+- You know the PR numbers and their order. Read each PR's target from GitHub:
+  `gh pr view <n> --json number,headRefName,baseRefName`.
+
+Record each branch's tip **before** the loop starts. PR N+1's rebase needs PR N's old tip.
+
+**The loop, for PR k = 1, 2, … in stack order:**
+
+1. **Rebase PR k on its base.** The base is whatever PR k targets on GitHub right now:
+   the stack's base for PR 1, PR k−1's branch otherwise (or the stack's base if PR k−1
+   has merged). Fetch first. If the base is already in the branch
+   (`git merge-base --is-ancestor origin/<base> <branch>` exits 0, or for PR k > 1 PR
+   k−1's current tip is in it), skip the rebase and the force-push and go to step 3.
+   Otherwise run it as a **Stack mode rebase link**: a base merge's full Phase 1 for PR 1,
+   a propagation run's Phase 1 for the PRs above. Rebase onto `origin/<base>` after the
+   fetch, the tip GitHub has, not a local branch. `<old-source-tip>` is PR k−1's tip from
+   before the loop, which you recorded (the same commit as its backup ref when it was
+   rebased). The decisions, the review page, the confirmation before Phase 2 (it is the
+   go for the rebase; a rebase has no separate commit step), the backup ref and Step 6's
+   checks (the PR's whole suite plus its job-review task checks, each quoted) all stay.
+   **Stop if a check fails.**
+2. **The user force-pushes.** Give the command in its own block and wait:
+   ```bash
+   git push --force-with-lease origin <branch>
+   ```
+   When they say it is pushed, check that GitHub has it. This must print the local tip:
+   ```bash
+   gh pr view <n> --json headRefOid -q .headRefOid
+   ```
+3. **Ask Claude to review.** The review runs when the `claude-review` label is *added*.
+   If the PR already has the label, remove it first, then add it. Note the time the
+   first line prints: it is `<T0>` below (shell variables don't survive between calls).
+   ```bash
+   date -u +%Y-%m-%dT%H:%M:%SZ
+   gh pr view <n> --json labels -q '.labels[].name' | grep -qx claude-review \
+     && gh pr edit <n> --remove-label claude-review
+   gh pr edit <n> --add-label claude-review
+   ```
+4. **Wait for the review.** Find the run the label started on PR k's branch:
+   ```bash
+   gh run list --branch <branch> --json databaseId,workflowName,status,createdAt \
+     --jq '.[] | select(.createdAt > "<T0>")'
+   ```
+   Then wait for it in the background with `gh run watch <id> --exit-status`. You are told
+   when it ends, so don't poll it. If no run appears within about 3 minutes, or the run
+   fails, stop and tell the user, with the run's link. When it succeeds, check that
+   claude[bot] posted a review or comment after `<T0>`. If it posted nothing new, say so
+   and stop.
+5. **Resolve the review** with `youssef-skills:resolve-claude-pr-review`. Load it and
+   follow it. Its gates stay: proposals approved in words, fixes test-first, the user
+   commits **and pushes** the fixes, then you check the head on GitHub, answer and
+   resolve each thread, and post the closing comment. When this loop rebased the PR,
+   the closing comment's **Branch** item names the rebase, with
+   `git range-diff <old-base>..<old-tip> <new-base>..<new-tip>` as proof. The old tip is
+   PR k's tip from before the loop. The old base is the commit it sat on then: PR k−1's
+   pre-loop tip, or for PR 1 its merge-base with the base. The new base and tip are what
+   step 1 rebased onto and produced. A review that ran but found nothing still gets the
+   closing comment (step 4 stops only when the bot posted nothing at all).
+6. **Record PR k and move to PR k+1.** Give one line: rebased onto `<base>@<sha>` (or
+   "no rebase needed"), its decision count, the review's finding count, the fix commit,
+   and the checks with their results. With a board, update PR k's sync line and its
+   review tasks in the same turn. PR k+1 rebases onto PR k's tip **after** the review
+   fixes, so the fixes go up the stack with it.
+
+**The user's gates stay the same as outside this mode:** every merge decision, the go to
+Phase 2, every commit, every push, and every review proposal. The user may waive one in
+words ("take all recommendations", "fix every finding that holds"). That covers only
+what they named, and only for this loop. Labelling the PR in step 3 and waiting in step 4
+need no extra yes: asking for the loop asks for them.
+
+**Stop the loop** on any failed check, a failed or missing review run, a push GitHub does
+not show, or the user saying stop. Say which PR and which step it stopped at. The PRs
+above it are untouched; when the loop resumes, it starts at that step.
+
+---
+
 ## Aborting safely
 
 At any point during Phase 2, if the user wants to abort:
@@ -535,4 +625,5 @@ If the user aborts during Phase 1 (before the merge has started), nothing needs 
 - Do not delete the backup ref. Leave cleanup to the user.
 - Do not skip the merge review artifact or the sha3bolly style, and do not deliver the findings as a long wall of terminal text instead. Every run ends Phase 1 with a published page built from `merge-review-template.html`, with every choice on its Decisions tab. The only exception is a stack-mode propagation run with no decisions and no Critical or Warning findings (see *Stack mode*).
 - Do not shorten a stack-mode propagation run's checks because the incoming change is known. The cross-diff analyst, the clean-but-dangerous scan and the PR's tests always run.
+- In Review loop mode, do not push, and do not label a PR before GitHub shows its rebased tip. Do not start PR k+1 before PR k's threads are resolved and its closing comment is posted. Do not rebase PR k+1 onto PR k's tip from before its review fixes.
 - Do not restyle the template or rewrite its scripts. Only the content changes from merge to merge.

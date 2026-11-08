@@ -468,6 +468,11 @@ update their targets and create commands, and publish the board with the stack o
 - **Branch check** (see *PR plan*). In a stack, a clean tree on PR N+1's branch also
   means PR N's work is committed on its own branch. Run the base probe (below) in the
   same check.
+- **Taking a finished stack through Claude's review.** Once every PR is complete, tested
+  and opened, and the user asks to put the stack through Claude's review (rebase each PR
+  on its base, push, then resolve the review), run `youssef-skills:merge-assistant` in its
+  *Review loop mode*. The user asking for this is their request for a rebase. Update each
+  PR's sync line and review tasks on the board as the loop goes.
 
 ### When the base moves
 
@@ -700,6 +705,13 @@ its row, and a new task arrives with its origin, in its issue's section or under
 **Republish to the same URL** (pass the artifact's `url`) so the link keeps working. If
 the board and the code disagree, everyone downstream is working from the wrong map.
 
+**Older boards carry older scripts.** A board keeps the `<script>` it was first built
+with, so a template fix never reaches it by itself. Before every republish of an existing
+board, search its script and markup for anything that opens a PR config: `.open = true`,
+`lastDone`, `setAttribute("open"`, or an `open` attribute on a `details.cfg`. If any is
+there, delete it and put the template's PR-config block in its place (the
+`details.cfg` loop that sets `cfg.open = false`). Change nothing else in the script.
+
 ## Two standing checkpoints
 
 **Lane / boundary.** Name every directory each job's fixes reach. Anything outside the
@@ -783,8 +795,10 @@ the link once, in one line.
   with no Issue cell. A task with no issue still gets its origin, under No issue.
 - `Closes #n` in a PR body while part of #n is open, undecided, or in another PR.
 - An issue's state or title written from memory instead of read from the tracker.
-- An `open` attribute on a PR config `<details>`, or a config expanded for any PR. Every
-  PR config stays collapsed, whatever its status.
+- An `open` attribute on a PR config `<details>`, or a config expanded for any PR, by
+  markup or by script. Every PR config stays collapsed, whatever its status. An older
+  board's script that opens one (the "last done PR" rule) is replaced at the next
+  republish (*Keeping the board current*).
 - Draft set to `no` while a PR it builds on still needs changes and the stack is not
   complete, or left at `yes` after it became merge-ready without telling the user.
 - Rebasing a stack branch when the user did not ask for a rebase, or rebasing the whole
