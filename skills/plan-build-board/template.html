@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <!-- TITLE: two to four words naming THIS board. Not "Board: explainer". -->
-<title>Planning Board</title>
+<title>Plan Build Board</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <style>
   :root{
@@ -376,7 +376,7 @@
     <h3>PRs — every job lands in one, shown on the PRs tab</h3>
     <p>The <em>PRs</em> tab lists every PR with its shape: <b>Independent</b> (branches from the base and targets it, merge in any order) or <b>Stacked</b> (targets the PR below it, merge in order). A stack exists only because the user chose one. Before the first edit of any PR, check you are on its branch with a clean tree; if another PR's work is still uncommitted, stop and say so. In a stack, implement jobs in PR order.</p>
     <p>When a PR's last job is reviewed, stacked or not, write its <b>whole config on the PRs tab</b>, the <b>body</b> included, and republish. <b>The body never goes in chat</b>; it lives here behind its Copy button. In chat, give the short fields, each in its own block (head branch, target branch, title, draft — yes unless every PR it builds on is merge-ready or the stack is complete, merge method, labels or reviewers only if the repo shows them), the <b>next branch name</b>, and a pointer to the body on this tab. <b>You never branch, commit, push or open the PR yourself</b> unless the user says so, in words.</p>
-    <p>Stacks only: <b>when the base moves, leave the stack alone</b> unless the base probe shows a conflict, the repo requires up-to-date branches, or a PR landed by squash or rebase merge. Then sync by <b>merging</b> (or rebasing, only when the user asks), <b>one PR at a time</b>, bottom-up, each through <code>youssef-skills:merge-assistant</code>: a full run for the base into PR 1, then a propagation run per PR above it. Every link is verified (dry-run, clean-but-dangerous scan, the PR's suite and its job-review checks) and committed by the user before the next starts. <b>A PR in the middle that needs a new commit</b> is synced first, then gets the commit, and only then does the sync go on to the PRs above it.</p>
+    <p>Stacks only: <b>when the base moves, leave the stack alone</b> unless the base probe shows a conflict, the repo requires up-to-date branches, or a PR landed by squash or rebase merge. Then sync by <b>merging</b> (or rebasing, only when the user asks), <b>one PR at a time</b>, bottom-up, each through <code>youssef-skills:integration-assistant</code>: a full run for the base into PR 1, then a propagation run per PR above it. Every link is verified (dry-run, clean-but-dangerous scan, the PR's suite and its job-review checks) and committed by the user before the next starts. <b>A PR in the middle that needs a new commit</b> is synced first, then gets the commit, and only then does the sync go on to the PRs above it.</p>
   </div>
 
   <div class="note">
@@ -386,7 +386,7 @@
 
   <div class="note">
     <h3>Stay in the cleared lane</h3>
-    <p>Directories in the user's <b>free</b> lanes (saved per repo in <code>~/.claude/planning-board/lanes.md</code>) are edited without asking. Every other directory a job reaches was asked in the question round, and the answer is on the task rows. Never edit outside the free lanes and what the answers cleared. Do not implement across the boundary because the fix is small — small is not the criterion.</p>
+    <p>Directories in the user's <b>free</b> lanes (saved per repo in <code>~/.claude/plan-build-board/lanes.md</code>) are edited without asking. Every other directory a job reaches was asked in the question round, and the answer is on the task rows. Never edit outside the free lanes and what the answers cleared. Do not implement across the boundary because the fix is small — small is not the criterion.</p>
   </div>
 
   <div class="note">
@@ -537,7 +537,7 @@
      Sync line: the base commit the PR is synced with and the last sync (what was merged,
      decisions, checks). Add class "warn" while a sync is needed or a cascade stopped here. -->
 <div class="panel" id="p-prs" role="tabpanel" aria-labelledby="tab-prs" hidden>
-  <p class="lede">Every job lands in one PR. <strong>Stacked</strong> PRs target the PR below them and are merged in order; <strong>independent</strong> PRs branch from the base, target it, and merge in any order. Land every PR with a <strong>merge commit</strong>. A stack is kept in sync <strong>one PR at a time</strong>, by <strong>merging</strong> (rebasing only when the user asks), and only when the base probe or a squash landing calls for it. The config under each PR is what to paste when you open it; every field has its own copy button.</p>
+  <p class="lede">Every job lands in one PR. <strong>Stacked</strong> PRs target the PR below them and are merged in order; <strong>independent</strong> PRs branch from the base, target it, and merge in any order. Land every PR with the merge method in its config: a <strong>merge commit</strong> when the repo allows it. A stack is kept in sync <strong>one PR at a time</strong>, by <strong>merging</strong> (rebasing only when the user asks), and only when the base probe or a squash landing calls for it. The config under each PR is what to paste when you open it; every field has its own copy button.</p>
 
   <section class="group">
     <div class="ghead"><h2>Overview</h2><span class="rule"></span><span class="n">3 PRs · 2 stacked · 1 independent</span></div>

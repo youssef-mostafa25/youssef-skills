@@ -13,7 +13,7 @@ first, answered on its own thread, and resolved. The work ends with one
 top-level PR comment saying what was done. The PR description is never
 edited; that comment is where the review's changes are recorded.
 
-**REQUIRED SUB-SKILL:** `youssef-skills:planning-board`. Its seven-heading
+**REQUIRED SUB-SKILL:** `youssef-skills:plan-build-board`. Its seven-heading
 proposal, board updates and "never commit" rule apply here unchanged.
 
 ## Steps
@@ -47,7 +47,7 @@ proposal, board updates and "never commit" rule apply here unchanged.
      resolve"), that approves the findings that hold. Implement those.
    - A refuted finding, a design change, or a Legacy question still needs the
      user's answer first. Ask them all in one round, before the findings go on
-     the board (planning-board's *question round*).
+     the board (plan-build-board's *question round*).
 
 4. **Fix, test first.** For each finding, write a test that fails on the
    current code, then fix it, then run the PR's whole suite and build. Update

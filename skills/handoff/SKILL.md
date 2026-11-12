@@ -17,7 +17,7 @@ The failure mode is a plausible-sounding doc built from memory: placeholder path
 
 If this session was **started from** or **references a prior handoff** (a `*_HANDOFF.md` the user pasted, opened, or pointed you to), the new handoff must be **cumulative — it replaces the old one and is fully self-contained.** Never just link to the prior doc; the next session may not have it.
 
-- **Find it:** check the conversation and the repo root for an existing `*_HANDOFF.md` on the same topic.
+- **Find it:** check the conversation and `.handoffs/` for an existing `*_HANDOFF.md` on the same topic, and the repo root too (handoffs written before `.handoffs/` existed). A root one you carry forward is replaced by the new file in `.handoffs/`: delete the root copy once the new one is written, and if `git ls-files` shows it was tracked, tell the user its deletion needs committing.
 - **Fold it in, with updated status:** every item the prior handoff listed gets carried over and re-marked — `✅` if this session completed it, `⚠️` if still pending, or note if it was abandoned/superseded. Don't silently drop prior remaining items just because this session didn't touch them.
 - **Preserve prior decisions and dead-ends** so they aren't redone, even if this session didn't revisit them.
 - **Result:** a reader with ONLY the new file knows the full history — session 1's work + session 2's work + what's still open — not just the latest slice.
@@ -36,7 +36,23 @@ If you cannot verify a claim, mark it explicitly as **unverified** rather than s
 
 ## Step 2 — Write the document
 
-**Always write the handoff to a `.md` file** — never just print it in chat. Save to the repo root as `<TOPIC>_HANDOFF.md` (e.g. `CSV_EXPORT_HANDOFF.md`); if carrying forward an inbound handoff (Step 0), reuse that file's exact name so it supersedes the old one. After writing, tell the user the file path. Use these sections — drop any that genuinely don't apply, never pad:
+**Always write the handoff to a `.md` file** — never just print it in chat. Save it in the **`.handoffs/` folder at the repo root** as `.handoffs/<TOPIC>_HANDOFF.md` (e.g. `.handoffs/CSV_EXPORT_HANDOFF.md`).
+
+**Git-ignore the folder first (automatic, first use per repo).** From the repo root, before writing:
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+mkdir -p .handoffs
+grep -qxF '.handoffs/' .gitignore 2>/dev/null || \
+  printf '\n# handoff skill: local session handoffs, never commit\n.handoffs/\n' >> .gitignore
+git ls-files .handoffs   # must print nothing
+```
+
+- If it appended the line, tell the user once: *"I added `.handoffs/` to `.gitignore`. Commit that line on its own or with your next commit."*
+- If `git ls-files` prints anything, handoffs were committed earlier and `.gitignore` won't hide them. Tell the user they need `git rm --cached` on those files.
+- Not a git repo → just create `.handoffs/` in the project root.
+
+If carrying forward an inbound handoff (Step 0), reuse that file's exact name so it supersedes the old one. After writing, tell the user the file path. Use these sections — drop any that genuinely don't apply, never pad:
 
 1. **Title + one-paragraph scope** — branch, what this work is, in plain terms.
 2. **TL;DR / where things stand** — bullet list with `✅` done-and-verified, `⚠️` remaining/at-risk. The reader should grasp the whole state in 20 seconds.

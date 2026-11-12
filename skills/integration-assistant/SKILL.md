@@ -1,9 +1,9 @@
 ---
-name: merge-assistant
-description: Guide safe git branch merges by analyzing what changed on each branch in parallel, surfacing not just textual conflicts but also semantic and logical issues that silently break things, getting the user's decision on every issue upfront, then executing the merge with those decisions baked in. Use this whenever the user wants to merge git branches together — phrasings like "merge my feature into main", "combine these branches", "bring my branch up to date with main", "help me resolve merge conflicts", or any request involving git merge planning. Strongly prefer this skill over a quick `git merge` for any non-trivial merge. Also used by planning-board to keep a stacked PR in sync (Stack mode), and when a finished, tested stacked PR should go through Claude's PR review one PR at a time, rebased on its base first ("run the stack through Claude's review", Review loop mode).
+name: integration-assistant
+description: Guide safe git branch merges and rebases by analyzing what changed on each branch in parallel, surfacing not just textual conflicts but also semantic and logical issues that silently break things, getting the user's decision on every issue upfront, then executing the merge with those decisions baked in. Use this whenever the user wants to merge git branches together — phrasings like "merge my feature into main", "combine these branches", "bring my branch up to date with main", "help me resolve merge conflicts", or any request involving git merge planning. Strongly prefer this skill over a quick `git merge` for any non-trivial merge. Also used by plan-build-board to keep a stacked PR in sync (Stack mode), and when a finished, tested stacked PR should go through Claude's PR review one PR at a time, rebased on its base first ("run the stack through Claude's review", Review loop mode).
 ---
 
-# Merge Assistant
+# Integration Assistant
 
 Help the user merge one git branch into another (source into target) carefully and deliberately. The defining feature of this skill is that all the thinking is front-loaded: analyze both branches, surface every conflict and risk, get the user to decide how to handle each one — *before* starting the merge. The mechanical resolution is then driven by decisions already made.
 
@@ -418,9 +418,9 @@ If they choose to commit, use `git commit` (default merge message in editor) or 
 
 ---
 
-## Stack mode (called from planning-board)
+## Stack mode (called from plan-build-board)
 
-`youssef-skills:planning-board` keeps a stacked PR in sync **one PR at a time**, by
+`youssef-skills:plan-build-board` keeps a stacked PR in sync **one PR at a time**, by
 **merging**, or by **rebasing** only when the user asked for a rebase. Every link runs
 through this skill. The caller tells you the **link**: the source branch, the target
 branch, which kind of run it is, and merge or rebase. One link per run, bottom-up.

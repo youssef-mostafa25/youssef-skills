@@ -6,8 +6,8 @@ plain words, always a real example, and a flowchart when steps chain together.
 Created by [Habiba Abueldahab](https://github.com/abueldahabh). The original is at
 [abueldahabh/sha3bolly](https://github.com/abueldahabh/sha3bolly), MIT licensed (see
 [`LICENSE`](LICENSE)). It ships here because
-[planning-board](../planning-board/README.md) and
-[merge-assistant](../merge-assistant/README.md) explain things this way.
+[plan-build-board](../plan-build-board/README.md) and
+[integration-assistant](../integration-assistant/README.md) explain things this way.
 
 ## How to use it
 

@@ -1,6 +1,6 @@
-# merge-assistant
+# integration-assistant
 
-Merge git branches without surprises. Before anything is merged, Claude works out what
+Merge or rebase git branches without surprises. Before anything is merged or rebased, Claude works out what
 each branch changed and where they collide. That includes changes that merge cleanly
 but break when the code runs. You decide how to handle each one, and then the merge is
 done your way.

@@ -7,9 +7,9 @@ description: Explain answers as if to a junior software engineer — plain langu
 
 > Created by Habiba Abueldahab ([@abueldahabh](https://github.com/abueldahabh)).
 > Original: https://github.com/abueldahabh/sha3bolly — bundled here because
-> `planning-board` depends on it. MIT licensed; see `LICENSE` in this folder.
+> `plan-build-board` depends on it. MIT licensed; see `LICENSE` in this folder.
 
-This is the canonical statement of the style. The `planning-board` skill in this
+This is the canonical statement of the style. The `plan-build-board` skill in this
 plugin restates the core rules in its "How to explain it in chat" section so a
 proposal reads the same way even if this file does not load. Change the rules
 here and change them there too.

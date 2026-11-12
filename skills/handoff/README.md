@@ -1,8 +1,9 @@
 # handoff
 
 Pause work and pick it up later without losing anything. Claude writes a
-`<TOPIC>_HANDOFF.md` at the root of your repo. A fresh session, or a teammate, can carry
-on from that file and the repo alone.
+`.handoffs/<TOPIC>_HANDOFF.md` in your repo. The `.handoffs/` folder is added to
+`.gitignore` the first time, so handoffs never get committed. A fresh session can carry
+on from that file and the repo alone. To hand off to a teammate, send them the file.
 
 ## How to use it
 

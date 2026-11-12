@@ -1,9 +1,9 @@
 ---
-name: planning-board
+name: plan-build-board
 description: Use when the user says to start a job, take one on, move onto the next task, job or PR, work through a set of tracked issues, or asks for a plan before implementation — any piece of work with more than one task, where each task needs its own written proposal approved in words before any implementation file is touched, tracked on a published status page. Large plans can be split into a stacked PR, only if the user agrees.
 ---
 
-# Planning Board
+# Plan Build Board
 
 ## Overview
 
@@ -384,7 +384,6 @@ user's call.
    **Every create command carries `--no-track`, with no exceptions.** Without it, a branch
    started from `origin/<base>` gets `<base>` as its upstream, and the user's next push or
    editor Sync lands the PR's commits directly on `<base>` instead of in a PR targeting it.
-   That happened once (2026-10-20) and reached a teammate's branch before anyone noticed.
 
 Above the PRs, an **overview table** lists every PR with its shape, branch → target,
 what it builds on ("—" for independent), its jobs, and the issues it closes or addresses
@@ -473,7 +472,7 @@ update their targets and create commands, and publish the board with the stack o
   same check.
 - **Taking a finished stack through Claude's review.** Once every PR is complete, tested
   and opened, and the user asks to put the stack through Claude's review (rebase each PR
-  on its base, push, then resolve the review), run `youssef-skills:merge-assistant` in its
+  on its base, push, then resolve the review), run `youssef-skills:integration-assistant` in its
   *Review loop mode*. The user asking for this is their request for a rebase. Update each
   PR's sync line and review tasks on the board as the loop goes.
 
@@ -492,7 +491,7 @@ when one of these is true:
 force-push and review comments stay attached. Rebase only when the user asks for it, in
 words, and then still one PR at a time: never one command that rebases the whole stack
 (`git rebase --update-refs`). Every sync link, merge or rebase, goes through
-`youssef-skills:merge-assistant` in its *Stack mode*. Load it and follow it.
+`youssef-skills:integration-assistant` in its *Stack mode*. Load it and follow it.
 
 **The base probe** is read-only, so run it at every branch check:
 
@@ -504,11 +503,11 @@ git merge-tree --write-tree origin/main <PR 1 branch>   # exit 1 = conflict (git
 
 Report it in one line, such as "main is 7 commits ahead of PR 1 and merges cleanly, no
 action needed", and put it on that chain's base line on the PRs tab. A clean probe is not a reason
-to sync. On older git, use merge-assistant's dry-run in a detached worktree instead.
+to sync. On older git, use integration-assistant's dry-run in a detached worktree instead.
 
 | What happened | What to do |
 |---|---|
-| The base moved and a sync is needed | 1. **Base merge**: merge the base into PR 1, a full merge-assistant run. 2. **Propagate** bottom-up: PR 1 into PR 2, PR 2 into PR 3, each a stack-mode propagation run. |
+| The base moved and a sync is needed | 1. **Base merge**: merge the base into PR 1, a full integration-assistant run. 2. **Propagate** bottom-up: PR 1 into PR 2, PR 2 into PR 3, each a stack-mode propagation run. |
 | PR N landed with a merge commit | Retarget PR N+1 to the base. GitHub does this itself when PR N's branch is deleted on merge. Nothing to merge. |
 | PR N landed by squash or rebase merge | The base now has PR N's changes under new commits, so PR N+1's diff shows them again. Merge the base into PR N+1 as a propagation run, where the known change is PR N as it landed. Then retarget. Keep PR N's branch until this is done, because the run compares against it. |
 | Review changed PR N after PR N+1 started | If PRs below N, or N itself, are due a sync, sync up to and including PR N first (*A new commit mid-stack*). Then add the commit to PR N, then propagate PR N into PR N+1 and upward. The known change is PR N's new commits. |
@@ -533,8 +532,10 @@ to sync. On older git, use merge-assistant's dry-run in a detached worktree inst
 - **Stop the cascade on any failure** and say which link it stopped at. Links above it
   stay as they were. If the fix is a new commit in that PR, it follows *A new commit
   mid-stack*: the sync is committed, then the fix, then the cascade goes on.
-- **Recommend merge commits for landing.** Every PR config carries "Merge method: merge
-  commit". A squash forces a propagation run on every PR above it.
+- **Recommend merge commits for landing, when the repo allows them.** A squash or rebase
+  landing forces a propagation run on every PR above it. If the repo allows no merge
+  commits (*PR handoff*, Merge method), say so when the stack is proposed in the question
+  round: each landing then costs a sync of every PR above it.
 - **Board, same turn.** Each sync updates the PR's sync line on the PRs tab: the base
   commit it is synced with, what was merged, the decisions and the checks run. If a merge
   changed what a PR does, update its Body config and tell the user to edit the PR.
@@ -594,8 +595,11 @@ git switch -c auth-cleanup/3-ui-states --no-track
   HTML-escaped (`&` `<` `>`) so the copied text is the exact Markdown. End it with any PR
   attribution line the session requires.
 - **Labels and reviewers**: only when the repo shows them, through existing labels,
-  CODEOWNERS or the user's past PRs. Never invent one. **Merge method**: merge commit,
-  so the PRs above need no propagation run when it lands (see *When the base moves*).
+  CODEOWNERS or the user's past PRs. Never invent one. **Merge method**: what the repo allows, read once per board with
+  `gh repo view --json mergeCommitAllowed,squashMergeAllowed,rebaseMergeAllowed`. Merge
+  commit when it is allowed, so the PRs above need no propagation run when it lands (see
+  *When the base moves*); otherwise squash, then rebase, whichever is allowed first. Never
+  a method the repo disallows.
 - **Draft: yes by default.** It is `no` only when one of these holds, and the reason goes
   next to it:
   1. **Every PR it builds on is merge-ready**: PR 1 … PR N-1 can each merge into its
@@ -735,7 +739,7 @@ user named: "create the branches for this stack" covers branches, not commits or
 Which services the user lets you edit without asking differs per user and per repo, so
 it is asked once and saved, never assumed. No directory is free by default.
 
-**The lanes file** is `~/.claude/planning-board/lanes.md`, one section per repo. It lives
+**The lanes file** is `~/.claude/plan-build-board/lanes.md`, one section per repo. It lives
 outside the repo and is never committed. The section key is the repo's `origin` URL
 reduced to `host/owner/repo`: drop the scheme, any `user@`, a `:port` and a trailing
 `.git`, turn the SSH `:` into `/`, and lowercase it, so
@@ -766,7 +770,7 @@ manifest, build or deploy file (`package.json`, `go.mod`, `pyproject.toml`, `Doc
 **free** and which are **ask**. Recommend free for the directories most of this plan's
 tasks live in and ask for the rest. As soon as the user answers, write the section (create
 the file if it does not exist) and say in one line: *"Saved your lanes to
-`~/.claude/planning-board/lanes.md`. Say 'always let me edit X' or 'ask before X' to change
+`~/.claude/plan-build-board/lanes.md`. Say 'always let me edit X' or 'ask before X' to change
 them."*
 
 A lanes file with no section for this repo is the same as no file: run the setup.
@@ -863,7 +867,7 @@ the link once, in one line.
   complete, or left at `yes` after it became merge-ready without telling the user.
 - Rebasing a stack branch when the user did not ask for a rebase, or rebasing the whole
   stack in one command (`--update-refs`). Syncs are merges by default, one PR at a time,
-  through merge-assistant.
+  through integration-assistant.
 - Syncing the stack because main moved, when the probe is clean and nothing needs it.
 - Skipping a propagation run's checks because "we already know what changed".
 - Starting the next link of a sync cascade before the previous one is verified and committed.

@@ -1,4 +1,4 @@
-# planning-board
+# plan-build-board
 
 Plan first, then build, one approved piece at a time. Claude looks into the work, asks
 you everything it needs in one go, and writes a short proposal for each task. You
@@ -34,7 +34,7 @@ Say things like:
 
 The first time you use it in a repo, Claude lists the repo's services and asks which ones
 it may **always edit without asking** and which ones **need your OK each time** (a *lane
-exception*, asked per job). Your answer is saved in `~/.claude/planning-board/lanes.md`, one
+exception*, asked per job). Your answer is saved in `~/.claude/plan-build-board/lanes.md`, one
 section per repo, so later sessions don't ask again. Change it any time: "always let me
 edit `web/`" or "ask before touching `agent/`".
 
@@ -58,10 +58,10 @@ edit `web/`" or "ask before touching `agent/`".
   never send its commits onto the branch it was started from.
 - **When `main` moves,** the stack is left alone unless something actually needs a sync.
   Then it is updated one PR at a time, through
-  [merge-assistant](../merge-assistant/README.md).
+  [integration-assistant](../integration-assistant/README.md).
 - **Claude's review of a finished stack.** Once every PR is done, tested and opened, say
   "run the stack through Claude's review". Each PR is then rebased, reviewed by Claude
-  and fixed in turn (see merge-assistant's *Review loop*).
+  and fixed in turn (see integration-assistant's *Review loop*).
 
 ## Issues
 

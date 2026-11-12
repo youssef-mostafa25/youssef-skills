@@ -19,7 +19,7 @@ Say things like:
    wrong, or it's by design. Every verdict comes with the evidence. Comments from people
    are left alone.
 2. **A short proposal for each real problem,** tracked on your
-   [planning-board](../planning-board/README.md) board.
+   [plan-build-board](../plan-build-board/README.md) board.
 3. **Fixes with tests.** For each fix there's a test that fails without it, and then the
    PR's full test run.
 4. **Your commit and push.** Claude hands the change back; you commit and push it.
