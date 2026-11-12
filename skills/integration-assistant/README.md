@@ -39,7 +39,7 @@ bottom:
 
 ```
 Claude rebases the PR on its base  -->  you force-push
-   -->  Claude asks for a review (claude-review label)  -->  waits for it
+   -->  the review is requested, your saved way  -->  Claude waits for it
    -->  Claude fixes the findings (you approve, commit and push)
    -->  threads answered and resolved, closing comment posted
    -->  next PR
@@ -48,8 +48,11 @@ Claude rebases the PR on its base  -->  you force-push
 - **What you do:** make the merge decisions, give the go for each rebase, approve the
   review fixes, and run every commit and push. Claude gives you the exact commands and
   checks that GitHub got them before moving on.
-- **The review trigger:** Claude asks for each review by adding the `claude-review`
-  label. If the label is already on the PR, it removes it first and adds it again.
+- **The review trigger is your choice.** The first time in a repo, Claude asks how each
+  review should be requested: **ask** you before adding the review label (the default),
+  add it **automatically**, or leave it to **you**. The answer is saved in
+  `~/.claude/integration-assistant/review.md`, per repo. Change it any time: "always add
+  the review label", "ask me first", or "I'll request reviews myself".
 - **When it stops:** a failed check, a review that never starts, or "stop" from you.
   Claude tells you where it stopped, and the PRs above that point are left as they were.
 
@@ -57,5 +60,5 @@ Claude rebases the PR on its base  -->  you force-push
 
 - Claude Code signed in to a claude.ai account with Artifacts enabled. The review page
   is where you make your choices.
-- For the review loop: the `gh` CLI, and a repo where adding the `claude-review` label
-  starts Claude's review.
+- For the review loop: the `gh` CLI, and a repo where Claude reviews PRs (usually when a
+  label such as `claude-review` is added).

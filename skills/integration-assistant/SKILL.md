@@ -517,6 +517,32 @@ each PR", "review loop".
 
 Record each branch's tip **before** the loop starts. PR N+1's rebase needs PR N's old tip.
 
+**How the review is requested is the user's call, saved per repo.** Never add a review
+label on your own. Read this repo's section of `~/.claude/integration-assistant/review.md`
+(outside the repo, never committed). The section key is the repo's `origin` URL reduced to
+`host/owner/repo` and lowercased (`git@github.com:Acme/Shop.git` →
+`github.com/acme/shop`):
+
+```markdown
+## github.com/owner/repo
+- request: ask        # ask | auto | user
+- label: claude-review
+- updated: 2026-11-12
+```
+
+- **ask**: before each PR's review, ask "Add the `<label>` label to PR #n to request
+  Claude's review?" and add it only after a yes.
+- **auto**: add the label without asking, every PR.
+- **user**: the user requests the review themselves; you never touch the label.
+
+No section (first loop in this repo) → ask once, before the first PR, in one question:
+these three choices (recommend **ask**) and, for ask or auto, the label. Propose the label
+from the workflow in `.github/workflows/` that runs Claude's review on a `labeled`
+pull-request event; if none is found, ask for it. Write the section as soon as the user
+answers and say in one line: *"Saved to `~/.claude/integration-assistant/review.md`. Say
+'always add the review label', 'ask me first' or 'I'll request reviews myself' to change
+it."* When the user says one of those at any time, update the section the same turn.
+
 **The loop, for PR k = 1, 2, … in stack order:**
 
 1. **Rebase PR k on its base.** The base is whatever PR k targets on GitHub right now:
@@ -540,15 +566,18 @@ Record each branch's tip **before** the loop starts. PR N+1's rebase needs PR N'
    ```bash
    gh pr view <n> --json headRefOid -q .headRefOid
    ```
-3. **Ask Claude to review.** The review runs when the `claude-review` label is *added*.
-   If the PR already has the label, remove it first, then add it. Note the time the
+3. **Request Claude's review, the saved way** (*How the review is requested*). For
+   **ask**, get the yes first. For **ask** and **auto**: the review runs when the label is
+   *added*, so if the PR already has it, remove it first, then add it. Note the time the
    first line prints: it is `<T0>` below (shell variables don't survive between calls).
    ```bash
    date -u +%Y-%m-%dT%H:%M:%SZ
-   gh pr view <n> --json labels -q '.labels[].name' | grep -qx claude-review \
-     && gh pr edit <n> --remove-label claude-review
-   gh pr edit <n> --add-label claude-review
+   gh pr view <n> --json labels -q '.labels[].name' | grep -qx '<label>' \
+     && gh pr edit <n> --remove-label '<label>'
+   gh pr edit <n> --add-label '<label>'
    ```
+   For **user**: run only the `date` line for `<T0>`, tell the user PR #n is ready for
+   their review request, and wait until they say it is requested.
 4. **Wait for the review.** Find the run the label started on PR k's branch:
    ```bash
    gh run list --branch <branch> --json databaseId,workflowName,status,createdAt \
@@ -559,7 +588,8 @@ Record each branch's tip **before** the loop starts. PR N+1's rebase needs PR N'
    fails, stop and tell the user, with the run's link. When it succeeds, check that
    claude[bot] posted a review or comment after `<T0>`. If it posted nothing new, say so
    and stop.
-5. **Resolve the review** with `youssef-skills:resolve-claude-pr-review`. Load it and
+5. **Resolve the review** with `youssef-skills:resolve-pr-reviews`, scoped to
+   claude[bot]'s review (other reviewers' threads are left for later). Load it and
    follow it. Its gates stay: proposals approved in words, fixes test-first, the user
    commits **and pushes** the fixes, then you check the head on GitHub, answer and
    resolve each thread, and post the closing comment. When this loop rebased the PR,
@@ -578,8 +608,8 @@ Record each branch's tip **before** the loop starts. PR N+1's rebase needs PR N'
 **The user's gates stay the same as outside this mode:** every merge decision, the go to
 Phase 2, every commit, every push, and every review proposal. The user may waive one in
 words ("take all recommendations", "fix every finding that holds"). That covers only
-what they named, and only for this loop. Labelling the PR in step 3 and waiting in step 4
-need no extra yes: asking for the loop asks for them.
+what they named, and only for this loop. Requesting the review in step 3 follows the saved
+preference, never more; waiting in step 4 needs no extra yes.
 
 **Stop the loop** on any failed check, a failed or missing review run, a push GitHub does
 not show, or the user saying stop. Say which PR and which step it stopped at. The PRs
@@ -625,5 +655,5 @@ If the user aborts during Phase 1 (before the merge has started), nothing needs 
 - Do not delete the backup ref. Leave cleanup to the user.
 - Do not skip the merge review artifact or the sha3bolly style, and do not deliver the findings as a long wall of terminal text instead. Every run ends Phase 1 with a published page built from `merge-review-template.html`, with every choice on its Decisions tab. The only exception is a stack-mode propagation run with no decisions and no Critical or Warning findings (see *Stack mode*).
 - Do not shorten a stack-mode propagation run's checks because the incoming change is known. The cross-diff analyst, the clean-but-dangerous scan and the PR's tests always run.
-- In Review loop mode, do not push, and do not label a PR before GitHub shows its rebased tip. Do not start PR k+1 before PR k's threads are resolved and its closing comment is posted. Do not rebase PR k+1 onto PR k's tip from before its review fixes.
+- In Review loop mode, do not push, and do not label a PR before GitHub shows its rebased tip, or ever without the saved preference (or the user's yes) allowing it. Do not start PR k+1 before PR k's threads are resolved and its closing comment is posted. Do not rebase PR k+1 onto PR k's tip from before its review fixes.
 - Do not restyle the template or rewrite its scripts. Only the content changes from merge to merge.

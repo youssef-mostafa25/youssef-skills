@@ -24,7 +24,7 @@ To update later:
 |---|---|---|
 | [plan-build-board](skills/plan-build-board/README.md) | Plan multi-task work, approve each task, then build it job by job, tracked on a live board. Big plans can be split into PRs. | "start a job", "onto the next PR" |
 | [integration-assistant](skills/integration-assistant/README.md) | Merge or rebase branches safely: every conflict, including the ones that merge cleanly but break, decided by you up front. Can also take a finished PR stack through Claude's review, one PR at a time. | "merge my feature into main", "run the stack through Claude's review" |
-| [resolve-claude-pr-review](skills/resolve-claude-pr-review/README.md) | Check, fix, answer and resolve the comments Claude's reviewer left on a PR. | "fix claude's review on #123" |
+| [resolve-pr-reviews](skills/resolve-pr-reviews/README.md) | Check, fix, answer and resolve a PR's review comments, from AI reviewers or people. | "fix the review on #123", "address copilot's comments" |
 | [handoff](skills/handoff/README.md) | Save where you are in a git-ignored `.handoffs/` folder, so another session can pick it up. | "write a handoff" |
 | [debug-log-sink](skills/debug-log-sink/README.md) | Collect debug logs from processes whose output you can't see, then clean up every trace. | "I can't see the worker's logs" |
 | [sha3bolly](skills/sha3bolly/README.md) | Get explanations in plain words, with a real example and a flowchart. | "I don't understand", "explain again" |
@@ -36,9 +36,9 @@ plan-build-board ──plans and tracks──> your PRs
       │                                  │
       ├─ keeps stacked PRs in sync ──> integration-assistant
       │                                  │
-      │                                  └─ review loop ──> resolve-claude-pr-review
+      │                                  └─ review loop ──> resolve-pr-reviews
       │
-      └─ Claude review comments ──────> resolve-claude-pr-review
+      └─ PR review comments ──────────> resolve-pr-reviews
 ```
 
 All of them explain things in the sha3bolly style.
@@ -54,7 +54,7 @@ All of them explain things in the sha3bolly style.
   review). That needs Claude Code signed in to a claude.ai account with Artifacts
   enabled. Without it, plan-build-board still works but without the board.
   integration-assistant needs the page, because that's where you make your choices.
-- **resolve-claude-pr-review** and integration-assistant's review loop need the
+- **resolve-pr-reviews** and integration-assistant's review loop need the
   [`gh` CLI](https://cli.github.com/) signed in to your GitHub account.
 - **debug-log-sink** needs Python 3.
 
