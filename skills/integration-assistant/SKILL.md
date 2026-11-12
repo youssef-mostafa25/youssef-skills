@@ -16,7 +16,7 @@ Do not skip ahead. Do not start the merge during Phase 1. Do not ask new strateg
 
 ## Explanation style: always use sha3bolly
 
-**Invoke the `sha3bolly` skill (via the Skill tool) at the start of every run, before Step 1.** It ships in this plugin as `youssef-skills:sha3bolly`. Its rules govern everything this skill shows the user: the terminal messages, the merge review artifact (Phase 1, Step 5), the decision summary and the Phase 2 hand-off. In practice:
+**Invoke the `sha3bolly` skill (via the Skill tool) at the start of every run, before Step 1.** It ships alongside this skill as `sha3bolly`. Its rules govern everything this skill shows the user: the terminal messages, the merge review artifact (Phase 1, Step 5), the decision summary and the Phase 2 hand-off. In practice:
 
 - Plain words and short sentences. Define a term the first time it appears ("merge base", "delta", "auto-merge").
 - **Every issue gets a concrete example** — the real code line, the real error text, the real payload or filename from this merge. Never an abstract description on its own.
@@ -420,7 +420,7 @@ If they choose to commit, use `git commit` (default merge message in editor) or 
 
 ## Stack mode (called from plan-build-board)
 
-`youssef-skills:plan-build-board` keeps a stacked PR in sync **one PR at a time**, by
+The `plan-build-board` skill keeps a stacked PR in sync **one PR at a time**, by
 **merging**, or by **rebasing** only when the user asked for a rebase. Every link runs
 through this skill. The caller tells you the **link**: the source branch, the target
 branch, which kind of run it is, and merge or rebase. One link per run, bottom-up.
@@ -588,7 +588,7 @@ it."* When the user says one of those at any time, update the section the same t
    fails, stop and tell the user, with the run's link. When it succeeds, check that
    claude[bot] posted a review or comment after `<T0>`. If it posted nothing new, say so
    and stop.
-5. **Resolve the review** with `youssef-skills:resolve-pr-reviews`, scoped to
+5. **Resolve the review** with the `resolve-pr-reviews` skill, scoped to
    claude[bot]'s review (other reviewers' threads are left for later). Load it and
    follow it. Its gates stay: proposals approved in words, fixes test-first, the user
    commits **and pushes** the fixes, then you check the head on GitHub, answer and

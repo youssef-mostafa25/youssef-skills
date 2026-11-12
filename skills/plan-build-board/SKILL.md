@@ -472,7 +472,7 @@ update their targets and create commands, and publish the board with the stack o
   same check.
 - **Taking a finished stack through Claude's review.** Once every PR is complete, tested
   and opened, and the user asks to put the stack through Claude's review (rebase each PR
-  on its base, push, then resolve the review), run `youssef-skills:integration-assistant` in its
+  on its base, push, then resolve the review), run the `integration-assistant` skill in its
   *Review loop mode*. The user asking for this is their request for a rebase. Update each
   PR's sync line and review tasks on the board as the loop goes.
 
@@ -491,7 +491,7 @@ when one of these is true:
 force-push and review comments stay attached. Rebase only when the user asks for it, in
 words, and then still one PR at a time: never one command that rebases the whole stack
 (`git rebase --update-refs`). Every sync link, merge or rebase, goes through
-`youssef-skills:integration-assistant` in its *Stack mode*. Load it and follow it.
+the `integration-assistant` skill in its *Stack mode*. Load it and follow it.
 
 **The base probe** is read-only, so run it at every branch check:
 
@@ -676,7 +676,7 @@ The board is a **status board**. The reasoning goes in chat, written for a junio
    simple ASCII flow: `A --(does X)--> B --(does Y)--> C`.
 4. **Keep it small.** Short numbered steps, never one long block. Go deeper only when asked.
 
-The `sha3bolly` skill ships in this plugin (`youssef-skills:sha3bolly`) and is the canonical
+The `sha3bolly` skill ships alongside this one and is the canonical
 statement of this style — load it before writing the first proposal and follow it.
 
 ## Status lifecycle

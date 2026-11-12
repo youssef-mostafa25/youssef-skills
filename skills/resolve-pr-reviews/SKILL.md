@@ -13,7 +13,7 @@ with a written proposal and is fixed with a failing test first. Each thread is a
 on its own. The work ends with one top-level PR comment saying what was done. The PR
 description is never edited; that comment is where the review's changes are recorded.
 
-**REQUIRED SUB-SKILL:** `youssef-skills:plan-build-board`. Its seven-heading
+**REQUIRED SUB-SKILL:** the `plan-build-board` skill. Its seven-heading
 proposal, question round, board updates and "never commit" rule apply here unchanged.
 
 **AI or person.** A thread's reviewer is an **AI reviewer** when GraphQL gives its author
