@@ -40,9 +40,19 @@ edit `web/`" or "ask before touching `agent/`".
 
 ## What stays with you
 
-- **Approval.** Nothing is implemented until you approve it in words.
-- **Git.** Claude never commits, pushes, creates branches or opens PRs unless you ask,
-  and asking once doesn't cover the next time. Work is left uncommitted for you.
+Your [preferences](../../README.md#your-preferences) decide these, asked the first time
+you use the skill. The defaults:
+
+- **Approval** (`approval: wait`). Nothing is implemented until you approve it in words.
+  Pick `proceed` and Claude starts right after showing the plans, except for a
+  high-risk task, which always waits for your yes.
+- **Review** (`review: each-job`). One job, then Claude stops for your review. Pick
+  `each-pr` or `end` to get the reviews together at the end of the PR or of all the
+  approved work.
+- **Git** (`commit: never`, `push: never`). Claude never commits, pushes, creates branches
+  or opens PRs unless you ask, and asking once doesn't cover the next time. Work is left
+  uncommitted for you. With `ask` Claude asks each time; with `auto` it commits each job,
+  and pushes and opens each PR at its handoff.
 
 ## PRs
 

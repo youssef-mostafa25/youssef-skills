@@ -43,10 +43,29 @@ plan-build-board ──plans and tracks──> your PRs
 
 All of them explain things in the sha3bolly style.
 
-## Things that stay in your hands
+## Your preferences
 
-- **You approve every plan and decision** before Claude acts on it.
-- **You commit and push.** These skills leave work uncommitted and never push for you.
+How much Claude does on its own is your call, and each person sets their own. The first
+time you use a skill, it asks the settings it needs that you haven't answered yet, with
+the cautious choice recommended:
+
+| Setting | Choices | Used by |
+|---|---|---|
+| `commit`: commits and new branches | **never**, ask, auto | every skill that touches git |
+| `push`: pushes and opening PRs | **never**, ask, auto | every skill that touches git |
+| `force_push` | **never**, ask | integration-assistant |
+| `approval`: wait for your yes before building | **wait**, proceed | plan-build-board, resolve-pr-reviews |
+| `review`: when Claude stops for your review | **each-job**, each-pr, end | plan-build-board, resolve-pr-reviews |
+| `resolve_threads`: people's fixed review threads | **ask**, reviewer, me | resolve-pr-reviews |
+| `rerequest_review` | **ask**, always, never | resolve-pr-reviews |
+
+They're saved in `~/.claude/youssef-skills/preferences.md`, outside your repos. Edit the
+file, or just tell Claude ("commit for me from now on", "wait for my review after each
+job"). Saying it once ("push this one") covers that one time only.
+
+Some things no setting changes: you make every merge and design decision, every branch
+is created with `--no-track`, nothing is called done before it's verified, and a
+force-push always needs your yes.
 
 ## Requirements
 

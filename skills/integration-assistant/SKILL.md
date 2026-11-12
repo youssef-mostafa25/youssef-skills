@@ -25,6 +25,49 @@ Do not skip ahead. Do not start the merge during Phase 1. Do not ask new strateg
 
 The subagent prompts in Step 3 don't need this style: their reports are working material. You apply it when you synthesize them.
 
+## Your preferences
+
+Whether Claude commits, pushes or force-pushes differs per person, so it is **asked once
+per person and saved, never assumed.** The file is `~/.claude/youssef-skills/preferences.md`,
+shared by every youssef-skills skill (outside every repo, never committed). This skill reads
+its shared `git` section:
+
+```markdown
+## git
+- commit: never        # never | ask | auto   commits, and creating branches
+- push: never          # never | ask | auto   pushes, and opening PRs
+- force_push: never    # never | ask
+- updated: 2026-11-12
+```
+
+| Key | Value | What Claude does |
+|---|---|---|
+| `commit` | **never** (recommended) | Never commits, and doesn't offer to. Phase 2 ends with the change staged and the exact `git commit` command for the user. |
+| | ask | Phase 2 ends with the commit menu (Step 6) and commits only on the user's pick. |
+| | auto | Commits with the default merge message (rebases: nothing to commit) as soon as Step 6's checks pass, then shows `git log -1 --stat`. |
+| `push` | **never** (recommended) | Never pushes. The user pushes; Claude gives the command. |
+| | ask | After a commit, asks "Push `<branch>` to origin?" and pushes on a yes. |
+| | auto | Pushes after each commit it made, then checks GitHub has it. |
+| `force_push` | **never** (recommended) | Never force-pushes. The user runs `git push --force-with-lease`; Claude waits and checks. |
+| | ask | Asks before each force-push and runs `git push --force-with-lease origin <branch>` on a yes. Never plain `--force`. |
+
+`force_push` has no `auto`: rewriting a pushed branch always gets a yes.
+
+**First use: ask what is missing.** Before Step 1, read the file. Ask every one of these
+three keys that is missing, or has a value not listed, in **one** `AskUserQuestion` call,
+one question per key, the recommended value first labelled "(Recommended)". Keys another
+skill already saved are not asked again. Write the answers the moment the user replies
+(create the file or `git` section if needed, set `updated`) and say in one line: *"Saved
+to `~/.claude/youssef-skills/preferences.md`. Say things like 'commit merges for me' or
+'ask before pushing' to change them."* Change a key the same turn whenever the user asks.
+The user's words beat the file for that one action ("commit it", "don't push this one")
+and change the file only with "from now on" or "always".
+
+**No preference changes these:** the decisions are made in Phase 1, a dirty tree stops
+preflight, the dry-run happens in a detached worktree, the backup ref stays, and a failed
+check means no commit and no push. How Claude's review is requested in Review loop mode
+is a per-repo setting with its own file (*Review loop mode*).
+
 ## Vocabulary
 
 Use these names consistently — in your own analysis, in every subagent prompt, and in everything shown to the user. Never fall back to single-letter placeholders.
@@ -274,7 +317,7 @@ Before writing the file, make one `Artifact` call with `action: "quickstart"` an
 | **Combined** | Always | **Big picture**: a paragraph on the merge base and pull result, a mermaid flowchart of the two branches diverging and colliding, and a `.point` box with **the one thing to understand**. **Conflict map**: File, Type chip (UU / AA / DU / UD, with hunk count), What collides, Covered by. **Clean merges that still need checking**: the cross-diff analyst's clean-but-dangerous auto-merges (File, Risk, Why it is not safe, Covered by). |
 | **Issues** | Always | The first pass. Severity filters, then `#`, Severity, Issue, What's happening, Decided in; each row has `id="issue-<n>"` and a `tr.detail` under it holding the **Example** (`pre.code`) and the **Flow** (`pre.mermaid`) or a "Single step" note. Then the severity legend. No pickers. |
 | **Verification N** | Optional, one per verification round | Stats, a "How this round was checked" box saying what was really run, and an optional "What changed most" box. **New findings** (issue numbers continue from earlier tabs; chip New or Escalated; "Decided in" column). **Every earlier claim, checked**: Claim, Verdict chip (Holds / Corrected / Partly / Wrong / Not checked), What we found. **Refuted** suspicions with their evidence. Optional **Found on the way, not caused by this merge**. **What we could not check**. No pickers. |
-| **Decisions** | Always, last | A "Based on …" box (the script fills in the latest round's name) saying this list supersedes the earlier tabs, plus an optional red box for anything to settle before the merge. Optional glossary. **Recommendations at a glance** (`#`, Decision, Recommended, Effort, Risk) and the "Reset to recommendations" button. The **decision cards** with severity filters: the point, What's going on, Why it's a problem, Example, Flow, an options table (Option, What you do, What you get, Risk, Effort; the recommended row has `class="rec"` and a ✓), and the recommendation box with the picker; each card has `id="decision-D<n>"`. **Small fixes and notes, no decision needed**. Optional **Follow-ups** with pickers. **What happens after you decide**: the Phase 2 flowchart and the "Nothing is committed or pushed" box naming the project's test commands. |
+| **Decisions** | Always, last | A "Based on …" box (the script fills in the latest round's name) saying this list supersedes the earlier tabs, plus an optional red box for anything to settle before the merge. Optional glossary. **Recommendations at a glance** (`#`, Decision, Recommended, Effort, Risk) and the "Reset to recommendations" button. The **decision cards** with severity filters: the point, What's going on, Why it's a problem, Example, Flow, an options table (Option, What you do, What you get, Risk, Effort; the recommended row has `class="rec"` and a ✓), and the recommendation box with the picker; each card has `id="decision-D<n>"`. **Small fixes and notes, no decision needed**. Optional **Follow-ups** with pickers. **What happens after you decide**: the Phase 2 flowchart and the git box naming the project's test commands and saying, from the `commit` and `push` preferences, what happens after the checks. |
 
 **Adding a verification round.** When the user asks for another check, or a follow-up analysis changes the findings, never edit the Source, Target, Combined, Issues or earlier Verification tabs: they stay as the record of what each pass said. Copy the two `<template>` blocks from the skill's template file: the button goes just before the Decisions button, the panel just before the Decisions panel. Replace `verify-N` and `Verification N` with the round number and fill it in. Then **rebuild the Decisions tab** so it reflects every round so far, keeping the D- and F-numbers of decisions that still stand. Picks are saved per round, so the user starts the new round with every picker back on its (new) recommendation.
 
@@ -309,7 +352,7 @@ In the terminal, don't repeat the full walk-through. Show:
 2. The one or two sentences of "the one thing to understand".
 3. A compact index: one line per decision, giving the D-number, severity, title and recommended option.
 4. The artifact link. Say that every choice is on the Decisions tab, that its pickers start on the recommendations and build the reply (copy it as is, or change any pick first), and that the user can also type it by hand, for example `D1:1 D2:2 F1:yes`.
-5. A reminder that nothing has been merged yet, and nothing will be committed or pushed.
+5. A reminder that nothing has been merged yet, and what will happen to git after the merge, from the `commit` and `push` preferences ("nothing is committed or pushed until you say so" by default).
 
 #### Step 5d: Gather decisions
 
@@ -410,11 +453,13 @@ Merge ready to commit.
   Semantic fixes applied:     <count>
 ```
 
-**Do not commit automatically.** Ask: "Ready to commit? (1) commit now with the default merge message, (2) commit with a custom message, (3) let me review the staged changes first, or (4) abort and roll back."
+**Commit as the `commit` preference says** (*Your preferences*), and never when a check failed:
 
-If they choose to commit, use `git commit` (default merge message in editor) or `git commit -m "<message>"` if they provided one.
+- **never**: don't commit and don't offer to. Give the command: `git commit --no-edit` (default merge message) and say the user can review `git diff --cached` first.
+- **ask**: "Ready to commit? (1) commit now with the default merge message, (2) commit with a custom message, (3) let me review the staged changes first, or (4) abort and roll back." If they choose to commit, use `git commit --no-edit` or `git commit -m "<message>"` if they provided one.
+- **auto**: `git commit --no-edit`, then show `git log -1 --stat`. If the user asked to review first, wait for that.
 
-**Never push.** After committing, leave the push to the user. Mention: "Push when you're ready with `git push`."
+**Push as the `push` preference says.** never: leave it to the user ("Push when you're ready with `git push`."). ask: "Push `<target-branch>` to origin?" and push on a yes. auto: push after the commit Claude made. Pushing never follows a commit the user made themselves unless they ask.
 
 ---
 
@@ -480,7 +525,8 @@ backup ref), or the merge-base when PR N was not rebased. Use it in place of the
 merge-base in step 1 above too, because after a rebase the merge-base no longer marks the
 last sync. Resolve each stop with the decision log as in Steps 4 and 5, `git add`, then
 `git rebase --continue`. Never `--update-refs`, and never a rebase that moves more than
-this one branch. Step 6's checks run on the rebased tip. The user force-pushes it, with
+this one branch. Step 6's checks run on the rebased tip. It is force-pushed as the `force_push`
+preference says: by the user (never), or by Claude after a yes (ask), always with
 `git push --force-with-lease`.
 
 **A new commit mid-stack.** If PR N+1 needs a commit of its own (a review fix, a fix this
@@ -489,8 +535,8 @@ commit then goes on top as its own commit, verified and committed, and only afte
 does the caller start the link above. Never fold the fix into the merge commit, and never
 start the next link with the fix still pending.
 
-For every link: commit only when the user says so, as in Phase 2. Never push; a merge
-needs no force-push, so the user pushes normally. Finish with one line per link for the
+For every link: commit and push as the preferences say, as in Phase 2; a merge needs no
+force-push. Finish with one line per link for the
 board's sync line: what was merged or rebased onto, the base commit it is now synced
 with, the decision count, any commit added after the sync, and the checks with their
 results. If a check fails, stop and say so. The caller does not start the next link.
@@ -558,11 +604,13 @@ it."* When the user says one of those at any time, update the section the same t
    go for the rebase; a rebase has no separate commit step), the backup ref and Step 6's
    checks (the PR's whole suite plus its job-review task checks, each quoted) all stay.
    **Stop if a check fails.**
-2. **The user force-pushes.** Give the command in its own block and wait:
+2. **Force-push, the saved way** (`force_push`). never: give the command in its own
+   block and wait for the user. ask: ask "Force-push `<branch>` (with lease)?" and run it
+   on a yes.
    ```bash
    git push --force-with-lease origin <branch>
    ```
-   When they say it is pushed, check that GitHub has it. This must print the local tip:
+   Once it is pushed, check that GitHub has it. This must print the local tip:
    ```bash
    gh pr view <n> --json headRefOid -q .headRefOid
    ```
@@ -590,8 +638,9 @@ it."* When the user says one of those at any time, update the section the same t
    and stop.
 5. **Resolve the review** with the `resolve-pr-reviews` skill, scoped to
    claude[bot]'s review (other reviewers' threads are left for later). Load it and
-   follow it. Its gates stay: proposals approved in words, fixes test-first, the user
-   commits **and pushes** the fixes, then you check the head on GitHub, answer and
+   follow it. Its gates stay: proposals approved as the user's `approval` preference
+   says, fixes test-first, the fixes committed **and pushed** as the `commit` and `push`
+   preferences say, then you check the head on GitHub, answer and
    resolve each thread, and post the closing comment. When this loop rebased the PR,
    the closing comment's **Branch** item names the rebase, with
    `git range-diff <old-base>..<old-tip> <new-base>..<new-tip>` as proof. The old tip is
@@ -606,7 +655,8 @@ it."* When the user says one of those at any time, update the section the same t
    fixes, so the fixes go up the stack with it.
 
 **The user's gates stay the same as outside this mode:** every merge decision, the go to
-Phase 2, every commit, every push, and every review proposal. The user may waive one in
+Phase 2, and every review proposal; commits, pushes and force-pushes as the preferences
+say. The user may waive one in
 words ("take all recommendations", "fix every finding that holds"). That covers only
 what they named, and only for this loop. Requesting the review in step 3 follows the saved
 preference, never more; waiting in step 4 needs no extra yes.
@@ -648,12 +698,12 @@ If the user aborts during Phase 1 (before the merge has started), nothing needs 
 - Do not refer to the branches, the merge base, the analysis subagents, or the resolution options by bare single letters. Use the real branch names and the vocabulary above — "source branch", "target branch", "merge base", "cross-diff analyst" — so the user never has to hold a legend in their head.
 - Do not auto-resolve conflicts via a blanket rule like "prefer the source branch" without asking — the entire point of this skill is that the user makes each call.
 - Do not start the merge during Phase 1.
-- Do not commit or push without explicit user permission.
+- Do not commit, push or force-push beyond what the user's preferences (or their words, that once) allow. Never `--force` without `--with-lease`, and never commit after a failed check.
 - Do not skip semantic analysis — textual conflicts are the easy part; silent breakage is what causes regressions to slip through code review.
 - Do not treat a clean auto-merge as a correct merge. The most dangerous breakage lives in files that merged *without* conflict markers — especially a new function/route/class added on one side that still follows a convention the other side changed across its whole family. Re-scan them and exercise the runtime path.
 - Do not run the dry-run merge anywhere but a detached temporary worktree. If the worktree can't be created, stop — never merge in the live tree to "just check."
 - Do not delete the backup ref. Leave cleanup to the user.
 - Do not skip the merge review artifact or the sha3bolly style, and do not deliver the findings as a long wall of terminal text instead. Every run ends Phase 1 with a published page built from `merge-review-template.html`, with every choice on its Decisions tab. The only exception is a stack-mode propagation run with no decisions and no Critical or Warning findings (see *Stack mode*).
 - Do not shorten a stack-mode propagation run's checks because the incoming change is known. The cross-diff analyst, the clean-but-dangerous scan and the PR's tests always run.
-- In Review loop mode, do not push, and do not label a PR before GitHub shows its rebased tip, or ever without the saved preference (or the user's yes) allowing it. Do not start PR k+1 before PR k's threads are resolved and its closing comment is posted. Do not rebase PR k+1 onto PR k's tip from before its review fixes.
+- In Review loop mode, do not push beyond the preferences, and do not label a PR before GitHub shows its rebased tip, or ever without the saved preference (or the user's yes) allowing it. Do not start PR k+1 before PR k's threads are resolved and its closing comment is posted. Do not rebase PR k+1 onto PR k's tip from before its review fixes.
 - Do not restyle the template or rewrite its scripts. Only the content changes from merge to merge.

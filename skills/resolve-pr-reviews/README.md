@@ -19,14 +19,17 @@ Say things like:
    wrong, it's by design, or it was already fixed. Questions get answers. Every verdict
    comes with the evidence.
 2. **One round of questions** for what only you can decide: design changes, a person's
-   suggestions and nits, and whether to resolve people's threads or leave that to them.
+   suggestions and nits, and (unless your preferences already say) whether to resolve
+   people's threads or leave that to them, and whether to re-request their review.
 3. **A short proposal for each real problem,** tracked on your
    [plan-build-board](../plan-build-board/README.md) board.
 4. **Fixes with tests.** For each fix there's a test that fails without it, and then the
    PR's full test run.
-5. **Your commit and push.** Claude hands the change back; you commit and push it.
+5. **The commit and push**, your [preferred](../../README.md#your-preferences) way. By
+   default Claude hands the change back and you commit and push it.
 6. **Replies.** Each thread gets a reply naming the commit that fixed it, or the answer.
-   AI reviewers' threads are resolved. A person's thread is resolved only if you said so,
+   AI reviewers' threads are resolved. A person's thread is resolved only if you said so
+   (in the round or in your preferences),
    and one Claude disagrees with is always left for that person.
 7. **A closing comment**, one section per reviewer, saying what was fixed, how it was
    tested, and what was left alone and why.

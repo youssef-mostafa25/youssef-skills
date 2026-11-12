@@ -45,11 +45,80 @@ approval.** A task that still needs an answer is not on the board yet.
 **The rule: nothing is implemented until the user says yes, in words, to that specific
 task** — naming the task, or naming the job or PR that contains it. A thumbs-up on another
 task or job, silence, or your own confidence that the fix is obvious are not approval.
+The one exception is the user's own saved `approval: proceed` (*Your preferences*).
 
 **Plan as much as the user asks for; implement at most one job before they review it,**
-unless the user explicitly lifts that cap.
+unless the user lifts that cap, in words or through their saved `review` preference.
 "Next task" plans one task, "next job" one job, "next PR" every job in the PR. See *Plan
 scope*.
+
+## Your preferences
+
+How much Claude does on its own differs per person: whether it commits, pushes, waits for
+approval, waits for a review. So it is **asked once per person and saved, never assumed.**
+
+**The preferences file** is `~/.claude/youssef-skills/preferences.md`, shared by every
+youssef-skills skill. It lives outside every repo and is never committed. The `git`
+section is shared; each skill has its own section, each with its own `updated` date:
+
+```markdown
+## git
+- commit: never        # never | ask | auto   commits, and creating branches
+- push: never          # never | ask | auto   pushes, and opening PRs
+- force_push: never    # never | ask
+- updated: 2026-11-12
+## plan-build-board
+- approval: wait       # wait | proceed
+- review: each-job     # each-job | each-pr | end
+- updated: 2026-11-12
+```
+
+This skill reads four keys. The recommended value is how this skill worked before
+preferences existed.
+
+| Key | Value | What Claude does |
+|---|---|---|
+| `commit` | **never** (recommended) | Never commits or creates a branch. Work is left uncommitted; the user runs the commands Claude gives. |
+| | ask | At each commit point, asks "Commit job B as `<message>`?" and commits on a yes. Creates a PR's branch only after a yes. |
+| | auto | Commits at each commit point, one commit per job, and creates the next PR's branch at its handoff. |
+| `push` | **never** (recommended) | Never pushes or opens a PR. The PR handoff gives the fields and commands. |
+| | ask | At the PR handoff, asks before pushing the branch and again before opening the PR. |
+| | auto | At the PR handoff, pushes the branch and opens the PR from the board's config. |
+| `approval` | **wait** (recommended) | Step 5 as written: nothing is implemented until the user approves it in words. |
+| | proceed | Proposals are still presented (step 4), then the presented tasks move to `Approved` ("by preference" on the row) and implementation starts in the same turn. A **High-risk** task still waits for a yes in words. |
+| `review` | **each-job** (recommended) | The cap: one job, its review, then stop until the user says to go on. |
+| | each-pr | The PR's approved jobs are implemented job by job without stopping; every job review comes back in one message with the PR handoff. |
+| | end | The same across PRs, until no approved work is left. It still stops at a PR boundary that `commit` does not let Claude cross (the PR's work must be committed before the next PR's branch). |
+
+**A commit point** is a job reaching `Fixed`. With `review: each-job` that is after the
+user accepted its review ("go", "lgtm"). Otherwise it is as soon as the job is verified.
+One commit per job: the message follows the repo's style (`git log --oneline`) and ends
+with the attribution line the session requires; its short sha goes in the job's Review
+cell. A stack sync link is a commit point too.
+
+**First use: ask what is missing.** Before step 1, read the file. Ask every key this
+skill reads that is missing, or set to a value not listed above, in **one**
+`AskUserQuestion` call: one question per key, the recommended value first, labelled
+"(Recommended)". `git` keys another skill already saved are not asked again; with
+nothing missing, nothing is asked. Write the answers the moment the user replies (create
+the file or section if needed, set `updated`), and say in one line: *"Saved to
+`~/.claude/youssef-skills/preferences.md`. Say things like 'commit for me from now on' or
+'wait for my review after each job' to change them."* Then step 1. This setup is not the
+question round, and it comes before it. When resolve-pr-reviews loads this skill, its own
+setup has already asked these keys; don't ask twice.
+
+**Changing one.** The user can change a preference at any time ("commit for me from now
+on", "stop pushing", "review each job again"). Update the file the same turn, confirm in
+one line, and apply it from the next step.
+
+**The user's words beat the file, once.** "Commit this" under `never` commits that once;
+"don't push this one" under `auto` skips that once. Neither changes the file unless the
+user says "from now on" or "always". Being told once is never permission for the next time.
+
+**No preference changes these:** the question round, one proposal per task, lanes, the
+board updated in the same turn, verifying before `Fixed`, the branch check, and
+`--no-track` on every branch. This skill never force-pushes; stack rebases go through
+integration-assistant, which reads `force_push`.
 
 ## When to use
 
@@ -165,11 +234,14 @@ lanes and approach choices were answered in the question round. A task they reje
 park leaves the job (back to `Open`, or `Deferred`) and the job goes ahead without it;
 re-check that the rest still makes sense together. If the user changes a decision while
 approving, update the task's row and proposal before implementing it.
+With `approval: proceed` (*Your preferences*) there is no stop here: the presented tasks
+move to `Approved` in the same turn and step 6 starts, except a High-risk task, which
+still waits for a yes in words (with any task that depends on it).
 
 **Step 6 — implement one job.** All of the job's approved tasks, in the order the job
 header gave; in task scope, the one approved task. **Never more than one job before the
 user has its review**, even when a whole PR is approved, unless the user lifted the cap
-(*Plan scope*). Every hunk belongs to exactly one task — no edit that serves none of them,
+in words or with their `review` preference (*Plan scope*). Every hunk belongs to exactly one task — no edit that serves none of them,
 no "while I was here" cleanups. Reviewability is the deliverable.
 
 **Step 7 — verify before claiming Fixed.** Run the checks for each task and quote what
@@ -178,9 +250,11 @@ they printed. Not after writing the code — after proving it.
 **Step 8 — review, then stop.** Hand the change back in the shape in *Job review* below
 (for one task, in task scope; all of them in one message when the user lifted the cap),
 and put its one-line version in the job's Review cell. The
-job reaches `Fixed` when every task in it has. End with what comes next and stop: "Next:
+job reaches `Fixed` when every task in it has. That is its commit point: commit as the
+`commit` preference says (*Your preferences*). End with what comes next and stop: "Next:
 Job C (tasks 04 05), plans approved. Say go to implement it." or "Say next task / next
-job / next PR to plan more."
+job / next PR to plan more." With `review: each-pr` or `end`, don't stop: go on to the
+next approved job, and hand all the reviews back together (*Plan scope*).
 
 **Step 9 — PR handoff.** When the job just reviewed was the last one in its PR, stacked
 or independent, hand the PR over in the shape in *PR handoff* below, in the same turn as
@@ -261,7 +335,9 @@ review ("looks good", "lgtm"). Plans the user
 approved earlier, for a whole PR, are approval of those tasks, not this go: each further
 job of the PR still waits for it. In task scope, the next task waits for "next task".
 
-**Only the user lifts the cap**, explicitly and only as far as they say. "Implement all of
+**Only the user lifts the cap**, explicitly and only as far as they say, in words or with
+their saved `review` preference (`each-pr`: to the end of the PR; `end`: until approved
+work runs out). "Implement all of
 PR 1 without stopping" covers PR 1's approved jobs, not PR 2. Even then, work job by job:
 the board moves per job, each job gets its own job review, and they are handed back in job
 order in one message at the end. A question that surfaces during implementation was
@@ -319,8 +395,8 @@ change without re-deriving it:
 2. **Read it in this order** — the file or hunk to start from, and the path through the
    rest.
 3. **Proof** — per task, the check that was run and what it printed.
-4. **Review commands** — the work is uncommitted, so give `git diff -- <files>` for the
-   job. Where a file belongs to one task, list that command under the task so it can be
+4. **Review commands** — for uncommitted work, `git diff -- <files>` for the job; for a
+   job the `commit` preference already committed, `git show <sha> -- <files>`. Where a file belongs to one task, list that command under the task so it can be
    read alone; where tasks share a file, the line ranges from item 1 mark whose hunk is
    whose.
 5. **What did not change** — anything the user might expect to be touched and was not, and
@@ -514,8 +590,9 @@ to sync. On older git, use integration-assistant's dry-run in a detached worktre
 | The user moves the stack to a new base | Base merge of the new base into PR 1. The user retargets PR 1, then propagate. |
 
 - **One PR at a time, bottom-up**, for merges and rebases alike. A link is done when its
-  merge (or rebase) is verified and the user has committed it. The user commits and
-  pushes; you never push. Don't start the next link before that.
+  merge (or rebase) is verified and committed, by the user or as the `commit` preference
+  allows, and pushed as the `push` and `force_push` preferences say (*Your
+  preferences*). Don't start the next link before that.
 - **A new commit mid-stack.** When a PR in the middle needs a new commit (a review fix,
   a fix the sync's own checks called for, new work), the order is fixed:
   1. sync every PR below it and then that PR itself, one link at a time, each verified
@@ -622,6 +699,14 @@ git switch -c auth-cleanup/3-ui-states --no-track
   (`git switch -c <branch> --no-track origin/<base>`). Leave it out when no PR is left.
   Tell the user the first push sets the branch's own upstream:
   `git push -u origin <branch>`.
+- **What the preferences let Claude do here** (*Your preferences*). `push: auto` (or a
+  yes under `ask`): push with `git push -u origin <branch>`, check that
+  `git rev-parse --abbrev-ref @{upstream}` prints `origin/<branch>`, then open the PR
+  with `gh pr create` using the config's exact fields (base, head, title, the body from a
+  file, `--draft` when Draft is yes), record its number and link, and say so in one line
+  instead of the copy-the-fields block. `commit: auto` (or a yes under `ask`): once this
+  PR's work is committed, create the next branch with its create command, `--no-track`
+  included, and run the branch check on it. Under `never`, the user does each of these.
 
 In the same turn, set the PR to `Ready` on the PRs tab, fill its whole config there
 (the body included), and republish before you reply, so the
@@ -739,12 +824,17 @@ round**, per job, naming every directory (*Lanes*). Never edit outside the free 
 and the exceptions the answers cleared. A small fix is not an exception; small is not
 the criterion.
 
-**Never commit.** Implementation lands **uncommitted** in the working tree. No
-`git commit`, `git push`, `gh pr create`, amend or tag unless the user says so, in words —
-and being told once is not permission for the next time. **A PR plan or a stack does not
-change this.** A PR plan, or a yes to a stack, is not permission to commit, branch, push or open PRs. You give
-the config and the branch names, and the user runs them. Permission covers only what the
-user named: "create the branches for this stack" covers branches, not commits or pushes.
+**Commit and push only as the preferences say** (*Your preferences*). With
+`commit: never`, implementation lands **uncommitted** in the working tree: no
+`git commit`, branch, amend or tag. With `push: never`, no `git push` or `gh pr create`.
+Either holds unless the user says otherwise in words, and being told once is not
+permission for the next time. `ask` means a yes for each one; `auto` covers only the
+commit points and PR handoffs the table names, never an amend, a tag, a rebase or a
+force-push. **A PR plan or a stack does not change this.** A PR plan, or a yes to a
+stack, is not permission to commit, branch, push or open PRs beyond what the preferences
+allow. When they don't allow it, you give the config and the branch names, and the user
+runs them. Permission covers only what the user named: "create the branches for this
+stack" covers branches, not commits or pushes.
 
 ## Lanes
 
@@ -831,6 +921,11 @@ the link once, in one line.
 ## Red flags — stop
 
 - About to edit an implementation file for a task that is not `Approved`.
+- Starting step 1 without reading the preferences file, or with a key this skill reads
+  still missing; or asking a key the file already has.
+- Committing, branching, pushing or opening a PR beyond what the user's preferences (or
+  their words, that once) allow; or skipping a commit point under `commit: auto`.
+- Moving a High-risk task to `Approved` by `approval: proceed`.
 - Publishing the board, even a skeleton, before every question in the round is answered.
 - A task on the board that still needs an answer from the user, or a proposal that asks
   one. Approval is the only thing a proposal asks for.
@@ -838,9 +933,10 @@ the link once, in one line.
 - Presenting a whole job when the user said "next task", or one job when they said "next
   PR".
 - Implementing a second job (or a second task, in task scope) before the user has had the
-  review and said to go on. Approved PR plans are not that go.
+  review and said to go on, under `review: each-job`. Approved PR plans are not that go.
 - Reading "approve PR 1" as "implement PR 1 in one sitting". Only "without stopping", or
-  words like it, lifts the one-job cap, and only for what the user named.
+  words like it, or the `review` preference, lifts the one-job cap, and only as far as
+  they reach.
 - Writing one proposal that covers several tasks — a job has a header plus one proposal
   per task, never a merged plan.
 - Implementing a task that is not in the job being worked, or an edit that serves no
@@ -860,7 +956,8 @@ the link once, in one line.
 - A job split across two PRs, or a PR that breaks the build until a later one lands.
 - Editing for the next PR before the handoff and branch check, or with the previous
   PR's work still uncommitted in the tree.
-- Creating a branch, committing, pushing or opening a PR yourself because a stack exists.
+- Creating a branch, committing, pushing or opening a PR yourself because a stack exists,
+  when the preferences don't allow it.
 - A create command, or a branch you create, without `--no-track`; or a branch whose
   upstream is any branch but its own name. A push to that upstream skips the PR entirely.
 - A PR's last job reviewed without the PR handoff in the same turn.

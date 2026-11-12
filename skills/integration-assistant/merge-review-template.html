@@ -576,11 +576,11 @@ flowchart LR
   M --> R["resolve markers by your choices"]
   R --> S["apply the semantic fixes"]
   S --> T["{{the project's test and lint commands}}"]
-  T --> H["hand off, uncommitted"]
+  T --> H["{{hand off, uncommitted | commit as your preference says}}"]
     </pre>
     <div class="point">
-      <strong>Nothing is committed or pushed</strong>
-      <p>I show a summary of your picks and wait for your go-ahead. Then I save a backup ref, merge with <code>--no-commit</code>, apply your choices and run {{the project's test and lint commands}}. The result stays in the working tree for you to review. If a code path can't be exercised, I'll name it.</p>
+      <strong>{{Nothing is committed or pushed | What happens to git afterwards}}</strong>
+      <p>I show a summary of your picks and wait for your go-ahead. Then I save a backup ref, merge with <code>--no-commit</code>, apply your choices and run {{the project's test and lint commands}}. {{One sentence from your saved commit and push preferences, e.g. "The result stays in the working tree for you to review and commit." or "Once the checks pass I commit it; you push."}} If a code path can't be exercised, I'll name it.</p>
     </div>
   </section>
 </div>

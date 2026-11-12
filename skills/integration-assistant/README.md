@@ -28,9 +28,10 @@ Say things like:
    and paste the reply back. You can also type it yourself, for example
    `D1:1 D2:2`.
 4. **The merge.** Claude saves a backup point, merges without committing, applies your
-   decisions, and runs the checks. Then it asks you before committing.
-
-Nothing is committed without your yes, and Claude never pushes.
+   decisions, and runs the checks. What happens next is your
+   [preference](../../README.md#your-preferences): by default the merge is left staged
+   for you to commit and push. You can have Claude ask each time, or commit and push
+   on its own after the checks pass.
 
 ## Review loop (large stacked PRs)
 
@@ -39,16 +40,17 @@ on GitHub. Say "run the stack through Claude's review". Then, one PR at a time f
 bottom:
 
 ```
-Claude rebases the PR on its base  -->  you force-push
+Claude rebases the PR on its base  -->  force-push (you, or Claude after your yes)
    -->  the review is requested, your saved way  -->  Claude waits for it
-   -->  Claude fixes the findings (you approve, commit and push)
+   -->  Claude fixes the findings (approved, committed and pushed your saved way)
    -->  threads answered and resolved, closing comment posted
    -->  next PR
 ```
 
-- **What you do:** make the merge decisions, give the go for each rebase, approve the
-  review fixes, and run every commit and push. Claude gives you the exact commands and
-  checks that GitHub got them before moving on.
+- **What you do:** make the merge decisions, give the go for each rebase, and approve
+  the review fixes. Commits, pushes and force-pushes follow your preferences. By
+  default you run them, and Claude gives you the exact commands and checks that GitHub
+  got them before moving on.
 - **The review trigger is your choice.** The first time in a repo, Claude asks how each
   review should be requested: **ask** you before adding the review label (the default),
   add it **automatically**, or leave it to **you**. The answer is saved in

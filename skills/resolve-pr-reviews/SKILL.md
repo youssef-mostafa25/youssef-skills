@@ -14,7 +14,47 @@ on its own. The work ends with one top-level PR comment saying what was done. Th
 description is never edited; that comment is where the review's changes are recorded.
 
 **REQUIRED SUB-SKILL:** the `plan-build-board` skill. Its seven-heading
-proposal, question round, board updates and "never commit" rule apply here unchanged.
+proposal, question round, board updates, and its commit, push, approval and review
+preferences apply here unchanged.
+
+## Your preferences
+
+What Claude may do on its own differs per person, so it is **asked once per person and
+saved, never assumed**, in `~/.claude/youssef-skills/preferences.md` (shared by every
+youssef-skills skill, outside every repo, never committed). Besides plan-build-board's
+keys (`commit`, `push` in the `git` section; `approval`, `review` in its own), this skill
+reads two of its own:
+
+```markdown
+## resolve-pr-reviews
+- resolve_threads: ask     # ask | reviewer | me
+- rerequest_review: ask    # ask | always | never
+- updated: 2026-11-12
+```
+
+| Key | Value | What Claude does |
+|---|---|---|
+| `resolve_threads` | **ask** (recommended) | Asks in each round whether to resolve people's fixed threads, recommending to leave them to the reviewer. |
+| | reviewer | Never resolves a person's thread; the reviewer does. Not asked. |
+| | me | Resolves a person's thread once its fix is pushed and answered. Not asked. |
+| `rerequest_review` | **ask** (recommended) | Asks in each round whether to re-request people's review after the push. |
+| | always | Re-requests every person whose thread was fixed, after the replies. |
+| | never | Never re-requests. |
+
+Whatever the value, a person's question, refuted or by-design thread is **never**
+resolved by Claude, and an AI reviewer's thread is always resolved once answered.
+
+**First use: ask what is missing.** Before step 1, read the file. Ask every key this skill
+reads, its own and plan-build-board's, that is missing or has a value not listed, with
+`AskUserQuestion`, one question per key, the recommended value first labelled
+"(Recommended)", at most four per call. The recommended values are plan-build-board's
+(`commit: never`, `push: never`, `approval: wait`, `review: each-job`) and the ones above.
+Keys already saved, by any skill, are not asked again. Write the answers the moment the
+user replies (set each section's `updated`) and say in one line: *"Saved to
+`~/.claude/youssef-skills/preferences.md`. Say things like 'push the fixes for me' or
+'always resolve my reviewers' threads' to change them."* Change a key the same turn
+whenever the user asks. The user's words beat the file for that one PR, and change it only
+with "from now on" or "always".
 
 **AI or person.** A thread's reviewer is an **AI reviewer** when GraphQL gives its author
 `__typename: "Bot"` (claude, copilot-pull-request-reviewer, coderabbitai,
@@ -76,20 +116,30 @@ are handled differently in steps 2 and 6.
      "address alice's comments", "fix and resolve"), that approves the findings that
      hold. Implement those. "Resolve" in it also answers the round's resolve question
      for people's fixed threads, never for their questions or refuted findings.
+   - Otherwise the proposals wait for approval as plan-build-board's `approval`
+     preference says (`proceed`: implement the findings that hold, after presenting them).
    - Ask everything else in **one round**, before the findings go on the board
      (plan-build-board's *question round*): a design change, a Legacy question, each
      person's suggestion or nit, how to answer a person whose finding you refute, and
-     **whether to resolve people's threads** (recommend leaving them for the reviewer to
-     resolve, unless the user or the repo's habit says the author does), and whether to
-     re-request their review after the push.
+     **whether to resolve people's threads**, only when `resolve_threads` is `ask`
+     (recommend leaving them for the reviewer to resolve, unless the user or the repo's
+     habit says the author does), and whether to re-request their review after the push,
+     only when `rerequest_review` is `ask`.
 
 4. **Fix, test first.** For each finding, write a test that fails on the current code,
    then fix it, then run the PR's whole suite and build. Update the docs the change
    touches, and the board, in the same turn.
 
-5. **Hand back for the commit.** Give the job review and the `git diff` commands. The
-   user commits and pushes; you do not, unless told to in words. The replies must point
-   at a pushed commit.
+5. **Commit and push, the saved way** (*Your preferences*). Give the job review. Then:
+   - `commit: never` / `push: never`: give the `git diff` commands; the user commits and
+     pushes, and you wait. You do not, unless told to in words.
+   - `ask`: ask "Commit the fixes as `<message>`?" and then "Push `<branch>`?", and do
+     each on a yes.
+   - `auto`: commit the fixes as one commit (the repo's message style, the session's
+     attribution line), then push. With `review: each-job`, only after the user accepted
+     the job review.
+
+   Never amend, rebase or force-push here. The replies must point at a pushed commit.
 
 6. **Answer each thread**, once GitHub shows the fix as the PR's head. With nothing to
    fix (only questions, refuted or already-fixed items), answer straight after the
@@ -107,7 +157,7 @@ are handled differently in steps 2 and 6.
    | Thread | Reply | Resolve |
    |---|---|---|
    | AI reviewer, any outcome | the fix, the evidence it is refuted or by design, or for an observation `Left as is: <why>` | yes |
-   | Person, fixed or already fixed | the fix | only if the round said so |
+   | Person, fixed or already fixed | the fix | `resolve_threads: me`, or `ask` and the round said so |
    | Person, question | the answer | no, the reviewer resolves it |
    | Person, refuted or by design | the evidence, worded as the round agreed | **never**, the reviewer decides |
    | Person, suggestion or nit declined | the reason, as the round agreed | no |
@@ -115,7 +165,8 @@ are handled differently in steps 2 and 6.
    Name people by login without `@` in every reply and comment, unless the user asked to
    notify them.
 
-   Re-request a person's review only if the round said so:
+   Re-request a person's review when `rerequest_review` is `always`, or `ask` and the
+   round said so:
    `gh pr edit <n> --add-reviewer <login>`.
 
 7. **Post the closing comment** with `gh pr comment <n> --body-file <file>`. It is the
@@ -143,11 +194,12 @@ are handled differently in steps 2 and 6.
 | Mistake | Instead |
 |---|---|
 | Resolving a thread before the fix is pushed | Wait for the push; the reply names the commit |
-| Resolving a person's thread on your own, or one you refuted | Reply, and leave it to them unless the round said to resolve |
+| Resolving a person's thread on your own, or one you refuted | Reply, and leave it to them unless `resolve_threads` or the round says to resolve |
 | Reading only a thread's first comment | Read the whole thread; the reviewer's latest word counts |
 | Fixing an AI observation the review said was not a finding | Leave it, and say why in the closing comment |
 | Skipping a person's nit without asking | Put it in the question round with your recommendation |
 | One merged proposal for several findings | One proposal per finding; a job groups them |
-| Committing or pushing to resolve faster | Ask the user; "fix and resolve" is not permission to commit |
+| Committing or pushing to resolve faster | Only as the `commit` and `push` preferences allow; "fix and resolve" is not permission to commit |
+| Asking a resolve or re-request question the preferences already answer | Ask it in the round only when its key is `ask` |
 | Claiming a test proves the fix without running it on the old code | Edit the fix out, run the test and quote the failure, then edit the fix back. Never `git stash` |
 | Adding a "Review fixes" section to the PR description, or fixing a stale line in it | Leave the description as the author wrote it; put it all in the closing comment |
