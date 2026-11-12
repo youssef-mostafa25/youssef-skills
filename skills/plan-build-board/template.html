@@ -351,13 +351,13 @@
 <!-- ========== BEFORE YOU START ========== -->
 <div class="panel" id="p-proto" role="tabpanel" aria-labelledby="tab-proto">
 
-  <p class="lede">If you have been asked to work on this board, <strong>this page is the work — not the code change</strong>. You take the next task, job or PR from the <em>Jobs</em> tab — whichever the user asked for — write a proposal for each of its tasks in the shape below, update their rows, and <strong>come back for approval before touching any implementation file</strong>. Every question was asked and answered before this board was published, so every task here is ready: approval is all it still needs.</p>
+  <p class="lede">If you have been asked to work on this board, <strong>this page is the work — not the code change</strong>. You take the next task, job or PR from the <em>Jobs</em> tab — whichever the user asked for — write a proposal for each of its tasks in the shape below, update their rows, and <strong>follow the user's saved preferences</strong> on whether to wait for approval before touching any implementation file (by default you do). Every question was asked and answered before this board was published, so every task here is ready: approval is all it still needs.</p>
 
   <div class="note warn">
     <h3>The rule</h3>
-    <p><b>No implementation before an approved plan.</b> Plan what the user asked for: <em>next task</em> is one task, <em>next job</em> one job, <em>next PR</em> every job in that PR. Read the tasks, read the code they cite, write the job header and one proposal per task, set the rows to <span class="pill plan">Plan submitted</span>, and stop.</p>
-    <p><b>The user's preferences come first.</b> Read <code>~/.claude/youssef-skills/preferences.md</code> before anything else. It says whether you wait for approval (<code>approval</code>), when you stop for review (<code>review</code>), and whether you commit or push (<code>commit</code>, <code>push</code>). A key that is missing is asked once and saved. The rules below are the defaults those keys can change.</p>
-    <p><b>Implement one job at most, then stop for review.</b> However much was approved, implement one job (one task, if the user asked for a task), hand back its review, and wait for the user to say go on before the next. Only the user lifts this, in words or with their <code>review</code> preference, and only as far as they say. Approval is the user saying so, in words, naming the task or its job — a silence, a thumbs-up on something else, or your own confidence that the fix is obvious are not approval.</p>
+    <p><b>The user's preferences come first.</b> Read <code>~/.claude/youssef-skills/preferences.md</code> before anything else. It says whether you wait for approval (<code>approval</code>), when you stop for review (<code>review</code>), and whether you commit or push (<code>commit</code>, <code>push</code>). A key that is missing is asked once and saved. The rules below are the defaults; where a preference says otherwise, it wins.</p>
+    <p><b>By default, no implementation before an approved plan.</b> Plan what the user asked for: <em>next task</em> is one task, <em>next job</em> one job, <em>next PR</em> every job in that PR. Read the tasks, read the code they cite, write the job header and one proposal per task, set the rows to <span class="pill plan">Plan submitted</span>, and stop for approval (<code>approval: wait</code>). Approval is the user saying so, in words, naming the task or its job — a silence, a thumbs-up on something else, or your own confidence that the fix is obvious are not approval. With <code>approval: proceed</code>, the presented tasks are approved by preference and implementation starts at once, except a High-risk task, which always waits for a yes in words.</p>
+    <p><b>By default, implement one job at most, then stop for review</b> (<code>review: each-job</code>). However much was approved, implement one job (one task, if the user asked for a task), hand back its review, and wait for the user to say go on before the next. Only the user lifts this, in words or with their <code>review</code> preference (<code>each-pr</code>, <code>end</code>), and only as far as they say.</p>
     <p>Two things you <em>may</em> do without asking, because they are how the proposal gets written: <b>read anything</b>, and <b>run read-only checks</b> — greps, a throwaway probe in a scratch directory, a test suite that already exists. What you may not do is edit a file the fix would touch, or leave a scratch file behind in the repo.</p>
     <p><b>If the task turns out to be wrong, say that instead of proposing a fix.</b> A proposal that opens "this does not hold, here is why" is a good outcome and finishes the task — set the row to <span class="pill refuted">Refuted</span> or <span class="pill byd">By design</span> with the evidence.</p>
   </div>
@@ -444,7 +444,7 @@
     <details class="hist">
       <summary>Show 2 entries</summary>
       <ol>
-        <li><time>DATE</time><span><b>Job A approved</b> with lane agent/; legacy decided as recommended.</span></li>
+        <li><time>DATE</time><span><b>Job A approved</b> with lane dir/; legacy decided as recommended.</span></li>
         <li><time>DATE</time><span><b>Board published</b>: 4 tasks in 3 jobs, 3 PRs on main.</span></li>
       </ol>
     </details>
@@ -822,7 +822,7 @@ Start at file.py, then other_file.ts.
 
 <footer>
   Updated <b>DATE</b> · every status change updates the pill, the Evidence cell and the tally together.<br>
-  Work lands uncommitted; nothing is committed, pushed or opened as a PR unless asked for in words.
+  Commits, pushes and PRs follow the user's saved preferences; by default work lands uncommitted until they say so, in words.
 </footer>
 
 </div>

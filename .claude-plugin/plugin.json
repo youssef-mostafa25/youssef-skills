@@ -1,7 +1,7 @@
 {
   "name": "youssef-skills",
   "description": "Youssef Mostafa's Claude Code skills in one place: plan-build-board (approval-gated planning with a live status board, tasks grouped into reviewable jobs, a PRs tab with independent and stacked PRs and copyable configs, an Issues tab tracing issues to tasks, jobs and PRs), integration-assistant (git merges planned up front: parallel branch analysis, semantic-conflict detection, a tabbed decision review, and a review loop that rebases each stacked PR and resolves Claude's review on it), handoff (verified, cumulative session handoff docs), debug-log-sink (ephemeral localhost log collector with verified cleanup), resolve-pr-reviews (PR review comments from AI reviewers or people verified, fixed test-first, answered per thread and closed with one PR comment) and sha3bolly (junior-engineer explanation style).",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "author": {
     "name": "Youssef Mostafa"
   },
