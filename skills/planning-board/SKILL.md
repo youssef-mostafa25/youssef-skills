@@ -125,7 +125,8 @@ touch, and do not leave scratch files in the repo. Plan against the code, not ag
 what the user told you — if the premise does not hold, say so instead of proposing a fix.
 Record each task's **origin**: the issue and the part of it the task covers, or, with no
 issue, where it came from (a side catch while checking task NN, the user's request on a
-date, a PR review). Read each issue's title and state from the tracker
+date, a PR review). Read this repo's section of the **lanes file** (*Lanes*) to know which
+directories the user lets you edit without asking. Read each issue's title and state from the tracker
 (`gh issue view <n> --json title,state`), never from memory. Investigate **every** task
 deeply enough to write its proposal, because its questions must surface now, not when its
 turn comes. Then draft, without publishing: the task list, the jobs (*Forming jobs*) and
@@ -198,8 +199,10 @@ only time anything but approval is asked of the user.
    recommendation.
 3. **Approach choices.** Wherever two fixes are defensible: your recommendation, the
    alternative, and what changes with the answer.
-4. **Lanes.** Every directory outside the lane you were given that any job reaches, per
-   job.
+4. **Lanes** (*Lanes*). No section for this repo in the lanes file → the one-time lane
+   setup. Then, per job, every directory it reaches that is an **ask-first** lane, and
+   every directory in neither list (also asking which list it joins). Free lanes are
+   never asked.
 5. **The PR plan.** The layout in one line, and the stack proposal when it qualifies
    (*Stacked PRs*).
 6. **Anything else** a task would otherwise stop on: a value to use, an owner to ask, a
@@ -714,10 +717,11 @@ there, delete it and put the template's PR-config block in its place (the
 
 ## Two standing checkpoints
 
-**Lane / boundary.** Name every directory each job's fixes reach. Anything outside the
-lane you were given is **asked in the question round**, per job, naming every directory.
-Never edit outside the lane the answers cleared. A small fix is not an exception; small
-is not the criterion.
+**Lane / boundary.** Name every directory each job's fixes reach. A directory in the
+user's **free** lanes needs no question. Every other one is **asked in the question
+round**, per job, naming every directory (*Lanes*). Never edit outside the free lanes
+and the exceptions the answers cleared. A small fix is not an exception; small is not
+the criterion.
 
 **Never commit.** Implementation lands **uncommitted** in the working tree. No
 `git commit`, `git push`, `gh pr create`, amend or tag unless the user says so, in words —
@@ -725,6 +729,58 @@ and being told once is not permission for the next time. **A PR plan or a stack 
 change this.** A PR plan, or a yes to a stack, is not permission to commit, branch, push or open PRs. You give
 the config and the branch names, and the user runs them. Permission covers only what the
 user named: "create the branches for this stack" covers branches, not commits or pushes.
+
+## Lanes
+
+Which services the user lets you edit without asking differs per user and per repo, so
+it is asked once and saved, never assumed. No directory is free by default.
+
+**The lanes file** is `~/.claude/planning-board/lanes.md`, one section per repo. It lives
+outside the repo and is never committed. The section key is the repo's `origin` URL
+reduced to `host/owner/repo`: drop the scheme, any `user@`, a `:port` and a trailing
+`.git`, turn the SSH `:` into `/`, and lowercase it, so
+`git@github.com:Acme/Llumen.git` and `https://github.com/acme/llumen` are both
+`github.com/acme/llumen`. With no `origin` remote, the key is the main worktree's
+absolute path, `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"`, so
+every worktree of the repo shares one section.
+
+The format (the directories are only an example, never defaults):
+
+```markdown
+## github.com/owner/repo
+- free: agent/, shared/utils/
+- ask: backend/, web/
+- updated: 2026-11-12
+```
+
+- **free**: edit without asking, in every job, on every board in this repo.
+- **ask**: a **lane exception**, asked in the question round for each job that reaches it.
+- A path belongs to the most specific listed directory it sits under
+  (`shared/utils/x.ts` is free above even if `shared/` were ask). A path under neither list
+  is treated as ask until the user places it.
+
+**First board in a repo (no section): lane setup.** Make it the first question of the
+round. List every service directory in the repo: top-level directories with their own
+manifest, build or deploy file (`package.json`, `go.mod`, `pyproject.toml`, `Dockerfile`,
+…), plus any other top-level directory a task reaches. Ask, in one question, which are
+**free** and which are **ask**. Recommend free for the directories most of this plan's
+tasks live in and ask for the rest. As soon as the user answers, write the section (create
+the file if it does not exist) and say in one line: *"Saved your lanes to
+`~/.claude/planning-board/lanes.md`. Say 'always let me edit X' or 'ask before X' to change
+them."*
+
+A lanes file with no section for this repo is the same as no file: run the setup.
+
+**A directory in neither list.** Ask it as a lane exception for the job, and in the same
+question whether it joins free or ask from now on. Save the answer the same turn.
+
+**The user changes a lane** at any time ("always let me edit web/", "ask before touching
+agent/") → update the section in the same turn and confirm in one line. It applies from
+then on: a pending exception question for a directory just made free is dropped, and a
+directory just made ask is asked as an exception before its next edit, for any job not
+yet implemented. Only the user's
+words add or move a lane. Never add a directory to free yourself, even after the user
+cleared it as an exception for every job so far.
 
 ## Building the board
 
@@ -779,6 +835,10 @@ the link once, in one line.
 - A status changed in the code but not on the board this turn.
 - Marking `Fixed` before running the verification.
 - Editing a directory outside the lane because the fix was small.
+- Treating any directory as free without the lanes file saying so, or asking a lane
+  exception for a directory the file lists as free.
+- A lane answer (setup, a new directory, a change) not written to the lanes file the same
+  turn, or a directory added to free without the user's words.
 - Publishing a second board when one already exists for this work.
 - Splitting into a stack, or choosing its cuts, without the user saying yes in words.
 - A job split across two PRs, or a PR that breaks the build until a later one lands.

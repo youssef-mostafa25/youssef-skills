@@ -18,7 +18,7 @@ Say things like:
 ## What you'll see
 
 1. **One round of questions.** Which tasks to include, what to do with old code paths,
-   approach choices, which folders Claude may touch, and whether to split into PRs. It's
+   approach choices, which folders Claude may touch (see *Lanes* below), and whether to split into PRs. It's
    all asked at once, before anything is planned.
 2. **A link to the board.** Tabs for Jobs, PRs, the work queue, every task, and Issues
    when the work comes from tracked issues.
@@ -29,6 +29,14 @@ Say things like:
    you get a review you can read in one sitting: what changed where, the order to read
    it in, the test results, and a `git diff` per task. The next job starts only when you
    say so.
+
+## Lanes: folders Claude may edit
+
+The first time you use it in a repo, Claude lists the repo's services and asks which ones
+it may **always edit without asking** and which ones **need your OK each time** (a *lane
+exception*, asked per job). Your answer is saved in `~/.claude/planning-board/lanes.md`, one
+section per repo, so later sessions don't ask again. Change it any time: "always let me
+edit `web/`" or "ask before touching `agent/`".
 
 ## What stays with you
 

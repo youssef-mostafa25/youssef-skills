@@ -1,6 +1,6 @@
 ---
 name: debug-log-sink
-description: Use when debugging requires capturing log output that stdout/console cannot reliably show — across multiple processes, services, or hidden runtime contexts (frontend ↔ backend correlation, child processes, workers, serverless handlers, browser extensions, headless browsers, daemonized services, or race conditions where timing-sensitive console.log calls would interfere). Also use when a debug-log-sink session is active and the user is about to commit, says the bug is fixed, or asks to remove the debug logs. Not for permanent logging.
+description: Use when debugging requires capturing log output that stdout/console cannot reliably show — across multiple processes, services, or hidden runtime contexts (frontend ↔ backend correlation, child processes, workers, serverless handlers, browser extensions, headless browsers, daemonized services, or race conditions where timing-sensitive console.log calls would interfere). Also use when a debug-log-sink session is active and the user is about to commit, says the bug is fixed, or asks to clean up the debug logs or tear down the sink. Not for permanent logging.
 ---
 
 # debug-log-sink
@@ -66,7 +66,7 @@ git ls-files 'debug-log-sink.*'   # must print nothing
 
 - If it appended the line, tell the user: *"I added `debug-log-sink.*` to `.gitignore`.
   This is a one-time, permanent change. Commit it on its own (or with your next
-  commit). Teardown leaves it in place."*
+  commit). Full teardown leaves it in place."*
 - If `git ls-files` prints anything, sink files were committed earlier and `.gitignore`
   won't hide them. Stop and tell the user they need `git rm --cached` before you continue.
 - Not a git repo → skip this step and use the non-git grep in Cleanup.
@@ -205,7 +205,7 @@ Record in it:
 > tweaks — which nothing else will remind you about. A stale manifest
 > is how those get left behind.
 
-## Leftover check (used by the commit guard and both cleanup options)
+## Leftover check (used by the commit guard and both cleanup tiers)
 
 One command finds every call site. In a git repo the `.gitignore` entry hides the
 root artifacts from it, so **empty output means clean**:
@@ -230,30 +230,47 @@ git diff --cached --name-only | grep -E '(^|/)debug-log-sink\.'
 ```
 
 Both must print nothing. If either prints anything, **do not commit**. Tell the user
-which files carry debug-log-sink code, then either unstage those hunks or run Option 1
+which files carry debug-log-sink code, then either unstage those hunks or run Clean up the logs
 first. Never `git add -f` a `debug-log-sink.*` file. Never use `--no-verify` or a
 "strip it in a follow-up commit" plan: once a call site is committed, it stays in history.
 
-## Cleanup — two options (run the one the operator names)
+## Cleanup — exactly two tiers: **Clean up the logs** or **Full teardown**
 
-Ephemeral means it MUST be removed. There are two tiers: a light one that strips
-the debugging traces but keeps the sink available for more instrumenting, and the
-full teardown. **Option 2 is mandatory before the work is considered done / the
-branch is merged** — Option 1 is a mid-session reset, not a finish.
+| | **Clean up the logs** | **Full teardown** |
+|---|---|---|
+| Removes | the log lines: every `DEBUG_LOG_SINK` call site in source; empties `debug-log-sink.log` | everything Clean up the logs does, **plus** stops the collector, deletes all `debug-log-sink.*` files (script, PID, log file, manifest), reverts the environment tweaks in the manifest |
+| Keeps | the collector running, `debug-log-sink.py`, `.pid`, the log file (now empty), the manifest | only the real fix and the `.gitignore` entry |
+| `.gitignore` | untouched | **untouched** — the entry is permanent |
+| When | between debugging passes | the work is done; mandatory before merge |
 
-### Option 1 — remove logs added + captured (keep the sink up)
-Strips the instrumentation and clears the captured data, but leaves the collector
-running and `debug-log-sink.py` in place so you can re-instrument without
-re-standing-up the service. Use between debugging passes.
+### Pick the tier from the user's words
+
+There is no third option and no partial teardown. Every cleanup request is one of these two.
+
+| The user says… | Run |
+|---|---|
+| only **"logs" / "log lines" / "log calls"**: "clean up the logs", "remove / clear / strip the (debug) logs", "remove the log lines", "get rid of the logs, I want different ones" | **Clean up the logs** |
+| anything beyond the log lines: "tear down", "full teardown", "remove (the) debug-log-sink", "remove / stop / kill the sink or the collector", "delete the log file", "everything", "all of it" — even when "logs" is also in the sentence | **Full teardown** |
+| the work is over: "it's fixed", "we're done", "moving on", "ready to merge" | **Full teardown** (proactively, see Hard rules) |
+| a bare "clean up" that names neither | Ask: *"Clean up the logs, or full teardown?"* |
+
+When you report, use the tier's name, so the user learns the two words.
+
+Ephemeral means it MUST be removed: **Full teardown is mandatory before the work is
+considered done / the branch is merged.** Clean up the logs is a mid-session reset, not a finish.
+
+### Clean up the logs — remove the log lines, empty the log, sink stays up
+Use between debugging passes, so you can re-instrument without restarting the service.
 
 1. Run the leftover check to list every call site.
 2. Delete each marker line + the call it labels, and undo any structural edits the
    manifest flags (e.g. unwrap a JSX fragment). Do NOT touch `debug-log-sink.*` files.
-3. Clear captured logs, keeping the file and service: `: > debug-log-sink.log`
-4. Re-run the leftover check. It must print nothing.
+3. Empty the captured log, keeping the file and the service: `: > debug-log-sink.log`
+4. Update the manifest: no call sites remain.
+5. Re-run the leftover check. It must print nothing.
 
-### Option 2 — remove the ENTIRE debug-log-sink (full teardown)
-1. **Do Option 1 steps 1–2** if call sites remain.
+### Full teardown — remove the whole debug-log-sink (never `.gitignore`)
+1. **Do Clean up the logs steps 1–2** if call sites remain.
 2. **Stop the service and prove it is down:**
    ```bash
    kill "$(cat debug-log-sink.pid)" 2>/dev/null; sleep 0.3
@@ -278,18 +295,19 @@ re-standing-up the service. Use between debugging passes.
    deleted calls.
 6. **Run the project's test suite and a smoke run of the app** to confirm no
    half-deleted call site was left behind.
-7. **Report to the user:** what was removed, that the commit guard is clear, and, if
-   `.gitignore` was added this session, that it still needs committing.
+7. **Report to the user:** what was removed, that the commit guard is clear, that
+   `.gitignore` was left in place, and, if it was added this session, that it still
+   needs committing.
 
 ## Hard rules
 
 - **Always keep the log file (and all `debug-log-sink.*` artifacts) at the project root.** Never write them into a subdirectory — a single predictable root-level location is what keeps cleanup total.
 - **Maintain `debug-log-sink.cleanup.md` from the first instrumented line.** It records artifacts, every instrumented file, and — critically — the non-grepable changes (any env tweaks). Append to it the same turn you add new log sites. Cleanup uses it as the checklist of what to revert beyond the marker grep.
-- **Git-ignore on first use.** `debug-log-sink.*` goes in the tracked `.gitignore` (Starting it, Step 1) before any artifact is created. It is permanent; teardown never removes it.
-- **Never commit** any `debug-log-sink.*` file, call, or marker. Run the commit guard before every commit while a session is active. Option 2 is mandatory before the branch is merged.
+- **Git-ignore on first use.** `debug-log-sink.*` goes in the tracked `.gitignore` (Starting it, Step 1) before any artifact is created. It is permanent; Full teardown never removes it.
+- **Never commit** any `debug-log-sink.*` file, call, or marker. Run the commit guard before every commit while a session is active. Full teardown is mandatory before the branch is merged.
 - **Never generalize** this into a "real" logger. The moment it stops being temporary, it stops being this skill — use the project's actual logging stack instead.
 - **Never bind to a non-loopback interface.** Never add auth, TLS, or persistence — those imply a longevity this service does not have.
-- If the user reports the bug is fixed or moves on from the debug session, **proactively run Option 2 (full teardown)** and report exactly what was removed. (Use Option 1 only mid-session, when they want to clear traces but keep debugging.)
+- If the user reports the bug is fixed or moves on from the debug session, **proactively run Full teardown** and report exactly what was removed. When the user asks only about the logs / log lines, run Clean up the logs (see Pick the tier).
 
 ## Design rationale (why these choices)
 
@@ -304,7 +322,7 @@ re-standing-up the service. Use between debugging passes.
 
 ## Red flags — STOP and reconsider
 
-- "I'll just leave the sink running, I might need it later" → No. Cleanup now.
+- "I'll just leave the sink running, I might need it later" → No. Full teardown now (or Clean up the logs, if the user is still debugging).
 - "Let me wrap this in a helper to avoid repetition" → No. Repetition is the feature.
 - "I'll bind to 0.0.0.0 so the other machine can hit it too" → No. Stand up a real logging endpoint instead.
 - "I'll add a tiny auth header so it's safe to leave up" → You're building a real service. Stop and use the project's logger.

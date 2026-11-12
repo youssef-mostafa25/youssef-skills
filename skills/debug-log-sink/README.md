@@ -12,7 +12,8 @@ Say things like:
 
 - "I can't see the worker's logs"
 - "correlate the frontend and backend logs"
-- "remove the debug logs" (when you're done)
+- "clean up the logs" (remove the debug log lines and empty the log, keep debugging)
+- "full teardown" or "it's fixed" (remove the whole sink when you're done)
 
 ## What happens
 
@@ -24,8 +25,10 @@ start a small local log collector --> add marked debug lines to your code
 - **Local only.** The collector listens only on your own machine.
 - **`.gitignore`.** The first time it's used in a repo, `debug-log-sink.*` is added to
   `.gitignore` and stays there. Commit that line.
-- **Clean-up.** Every debug line is marked. When you're done, Claude removes them all and
-  shows that none are left.
+- **Clean-up, two choices.** *Clean up the logs* removes the marked debug log lines and
+  empties the log, but leaves the collector running for another pass. *Full teardown*
+  removes everything: the log lines, the collector, the log file and the rest of the
+  `debug-log-sink.*` files. Neither one touches `.gitignore`.
 
 ## Watch out
 
