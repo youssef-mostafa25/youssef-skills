@@ -278,6 +278,16 @@
     .cfg-row .cfg-v{grid-column:1 / -1;grid-row:2}
   }
 
+  /* History: the board's running log, collapsed at the bottom of Before you start */
+  details.hist{background:var(--panel);border:1px solid var(--rule);border-radius:7px;padding:12px 16px;margin-top:8px}
+  details.hist summary{cursor:pointer;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+  details.hist summary:hover{color:var(--ink)}
+  details.hist summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+  .hist ol{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+  .hist li{display:grid;grid-template-columns:62px minmax(0,1fr);gap:11px;font-size:13px;color:var(--ink-2);line-height:1.5}
+  .hist time{font-family:var(--mono);font-size:11px;color:var(--ink-3);padding-top:2px;white-space:nowrap}
+  .hist li b{color:var(--ink);font-weight:600}
+
   footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:11px;color:var(--ink-3);line-height:1.75}
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -297,12 +307,18 @@
     <h1>Board Title</h1>
     <p class="sub">One or two sentences: what this board covers, and what was read to produce the task list.</p>
     <p class="sub"><strong>Taking a job? Read <em>Before you start</em> first.</strong> Tasks are worked in jobs — groups implemented together and reviewed as one change. Every task gets a written proposal — issue, why, fix, gain, effort, risk, legacy — approved before any implementation file is touched, and this board is updated as each task moves.</p>
+    <!-- META: where things stand NOW, one short line each, shown above every tab.
+         Overwrite a line when it changes; never append to it. What happened (approved,
+         fixed, committed, opened, reviewed, rebased, decided) goes in History at the
+         bottom of Before you start, one dated line per event. -->
     <div class="meta">
       <span><b>Repo</b> name</span>
       <span><b>Branch</b> branch-name</span>
+      <!-- Head: the one commit work is on now, its branch, and the tree state. -->
       <span><b>Head</b> abc1234 <span style="color:var(--ink-3)">(clean / N uncommitted files)</span></span>
-      <!-- PRs: always. "N PRs on <base> · K stacked, M independent". Add
-           "· No stack — declined" when the user said no to a proposed stack. -->
+      <!-- PRs: always. "N PRs on <base> · K stacked, M independent", plus at most the one
+           thing in progress ("· PR 2 in review"). Add "· No stack — declined" when the
+           user said no to a proposed stack. Per-PR detail lives on the PRs tab. -->
       <span><b>PRs</b> 3 PRs on main · 2 stacked, 1 independent</span>
       <!-- Issues: only when a task comes from one. Numbers, then how many tasks have none. -->
       <span><b>Issues</b> #12, #15 · 1 task with no issue</span>
@@ -418,6 +434,20 @@
     <p>The <b>Queue</b> is maintained too: a task that reaches Fixed leaves it and the ranks close up. If fixing one task changes another's priority, say so and re-rank rather than leaving a stale order behind.</p>
     <p><b>Work lands uncommitted.</b> No commit, push or PR unless the user says so, in words. Republish to the same URL so the link keeps working.</p>
   </div>
+
+  <!-- HISTORY: the board's running log, for the next agent. Newest first, one <li> per
+       event, dated, in a sentence or two with the commit, PR or decision it produced.
+       Stays collapsed: never add `open`. The header meta says only where things stand now. -->
+  <section class="group" id="history">
+    <div class="ghead"><h2>History</h2><span class="rule"></span><span class="n">for the agent · newest first</span></div>
+    <details class="hist">
+      <summary>Show 2 entries</summary>
+      <ol>
+        <li><time>DATE</time><span><b>Job A approved</b> with lane agent/; legacy decided as recommended.</span></li>
+        <li><time>DATE</time><span><b>Board published</b>: 4 tasks in 3 jobs, 3 PRs on main.</span></li>
+      </ol>
+    </details>
+  </section>
 </div>
 
 

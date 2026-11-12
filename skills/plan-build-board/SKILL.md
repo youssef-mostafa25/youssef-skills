@@ -709,6 +709,18 @@ moves with it: a task leaving a job is removed from that job's row, and a finish
 keeps its row with its review. The **Issues** tab moves too: a task's pill there matches
 its row, and a new task arrives with its origin, in its issue's section or under No issue.
 
+**History goes on Before you start, never in the header.** The header meta sits above
+every tab, so it says only where things stand now, one short line each: `Head` is the one
+commit work is on, its branch and the tree state; `PRs` is the count and shape, plus at
+most the one thing in progress. Overwrite those lines; never append to them. Every event
+worth remembering (a plan approved, a job fixed or committed, a PR opened, reviewed or
+rebased, a decision, a placement) gets one dated `<li>` at the **top** of the **History**
+list at the bottom of Before you start, with the commit, PR or decision it produced, and
+the summary count (`Show N entries`) goes up by one. The list stays collapsed. Per-PR
+detail (tips, review threads, closing comments) belongs on the PRs tab, per-task detail in
+the Evidence cell. When an existing board's header has grown a log, move its events into
+History (newest first) on the next republish and cut the lines back to the current state.
+
 **Republish to the same URL** (pass the artifact's `url`) so the link keeps working. If
 the board and the code disagree, everyone downstream is working from the wrong map.
 
@@ -796,7 +808,7 @@ and add Method by copying the Queue panel and changing its id.
 
 | Tab | In template | Keep / add it when |
 |---|---|---|
-| Before you start | yes | Always. It is the protocol the user and the next agent read. |
+| Before you start | yes | Always. It is the protocol the user and the next agent read, and it ends with the collapsed **History** (*Keeping the board current*). |
 | Issues | yes | Whenever any task comes from an issue: issue → tasks → jobs → PRs, the No issue group, and the warnings (*Issues*). Delete it, and the Issue columns on Jobs and Queue, only when no task comes from one. |
 | Jobs | yes | Always. Every job in rank order: its tasks, why they are together, files touched, effort · risk, and the review once it is done. |
 | Queue | yes | Always. Open tasks in rank order — severity weighted by reach, certainty and cost — with the job each belongs to. |

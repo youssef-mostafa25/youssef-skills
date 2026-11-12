@@ -23,8 +23,9 @@ Say things like:
    - **Combined:** the big picture and a conflict map.
    - **Issues:** every problem found, each with a real example from your code.
    - **Decisions:** the choices you need to make.
-3. **Your picks.** Each decision has options with a recommended one. Pick on the page,
-   press Copy, and paste the reply back. You can also type it yourself, for example
+3. **Your picks.** Each decision has options with a recommended one, and the page starts
+   with every recommendation already picked. Change any you disagree with, press Copy,
+   and paste the reply back. You can also type it yourself, for example
    `D1:1 D2:2`.
 4. **The merge.** Claude saves a backup point, merges without committing, applies your
    decisions, and runs the checks. Then it asks you before committing.

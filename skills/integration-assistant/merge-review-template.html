@@ -262,7 +262,7 @@ a[data-goto] { color: inherit; text-decoration: underline; text-decoration-color
     <span class="arrow">into</span>
     <span class="branch target">{{TARGET_BRANCH}} · {{TARGET_SHORT_HASH}}</span>
   </div>
-  <p class="lede">Nothing has been merged yet. Each tab is one view of the merge. You make every choice on the <b>Decisions</b> tab, which reflects the latest verification; the bar at the bottom copies your reply from there.</p>
+  <p class="lede">Nothing has been merged yet. Each tab is one view of the merge. You make every choice on the <b>Decisions</b> tab, which reflects the latest verification. Every pick starts on the recommended option, so the bar at the bottom already holds a full reply: change what you disagree with, then copy it.</p>
   <div class="stats">
     <div class="stat"><b>{{N}}</b><span>commits on {{SOURCE_BRANCH}}</span></div>
     <div class="stat"><b>{{N}}</b><span>commits on {{TARGET_BRANCH}}</span></div>
@@ -477,15 +477,15 @@ flowchart LR
       </table>
     </div>
     <div class="recbox">
-      <p><strong>Want to go with every recommendation?</strong> This fills in every pick on this tab, including the follow-ups. You can still change any of them before copying your reply.</p>
-      <button type="button" class="userec">Use all recommendations</button>
+      <p><strong>Every pick starts on its recommendation</strong>, follow-ups included, so the reply below is ready to copy as it is. Change any pick you disagree with; this button puts them all back.</p>
+      <button type="button" class="userec">Reset to recommendations</button>
     </div>
   </section>
 
   <section>
     <div class="section-head">
       <h2>The decisions, one at a time</h2>
-      <p>Each card says what is going on, why it is a problem, a real example, the options, and what we recommend. "Other" means you'll describe your own approach in the reply.</p>
+      <p>Each card says what is going on, why it is a problem, a real example, the options, and what we recommend. Its picker starts on the recommendation. "Other" means you'll describe your own approach in the reply.</p>
     </div>
     <div class="filters" role="group" aria-label="Filter decisions by severity">
       <button type="button" data-filter="all" aria-pressed="true">All</button>
@@ -833,17 +833,18 @@ flowchart LR
     save(':picks:' + basisId, JSON.stringify(store));
   }
 
-  // Saved picks belong to the round the decisions are based on, keyed by data-issue,
-  // so a republish that adds or reorders cards keeps them and a new round starts fresh.
-  try {
-    var saved = JSON.parse(load(':picks:' + basisId) || 'null');
-    if (saved && typeof saved === 'object') {
-      picks.forEach(function (s) {
-        var v = saved[s.getAttribute('data-issue')];
-        if (typeof v === 'string') s.value = v;
-      });
-    }
-  } catch (e) {}
+  // Every pick starts on its recommendation (data-rec). Saved picks belong to the round the
+  // decisions are based on, keyed by data-issue, and win over the recommendation: a republish
+  // that adds or reorders cards keeps them, a new card starts on its recommendation, and a
+  // new round starts fresh from the recommendations.
+  var saved = null;
+  try { saved = JSON.parse(load(':picks:' + basisId) || 'null'); } catch (e) {}
+  if (!saved || typeof saved !== 'object') saved = {};
+  picks.forEach(function (s) {
+    var v = saved[s.getAttribute('data-issue')];
+    if (typeof v === 'string') s.value = v;
+    else if (s.hasAttribute('data-rec')) s.value = s.getAttribute('data-rec');
+  });
   picks.forEach(function (s) { s.addEventListener('change', buildReply); });
 
   slice(decisions.querySelectorAll('.userec')).forEach(function (b) {
