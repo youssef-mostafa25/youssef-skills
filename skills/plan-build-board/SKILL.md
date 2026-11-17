@@ -912,8 +912,9 @@ theirs do.
 
 A tab's count in the nav (`<span class="c">`) is hand-maintained like the tally.
 
-Load `artifact-design` before the first publish — the template already satisfies the page
-contract, so you are checking your additions, not re-deriving the page.
+Before the first publish, make one `Artifact` call with `action: "quickstart"` and
+`intent: "other"`, as the Artifact tool requires for a new page. The template already
+meets its page-design guidance, so you are checking your additions, not re-deriving the page.
 
 Write it to the scratchpad directory, then publish with the `Artifact` tool. Give the user
 the link once, in one line.

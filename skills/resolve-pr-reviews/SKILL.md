@@ -106,7 +106,8 @@ are handled differently in steps 2 and 6.
 
    A point in a review summary or a PR comment is sorted the same way; it just has no
    thread, so it is answered in the closing comment. **Already fixed** needs the commit
-   on the PR's head: `git merge-base --is-ancestor <sha> origin/<head-branch>` exits 0.
+   on the PR's head: run `git fetch origin <head-branch>` first, so the ref is current,
+   then `git merge-base --is-ancestor <sha> origin/<head-branch>` exits 0.
 
 3. **Write the proposals.** One per finding that holds, under the seven headings (issue,
    why, fix, gain, effort, risk, legacy). If a board exists for this work, add each one as
