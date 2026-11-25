@@ -1,0 +1,82 @@
+<!--
+  swimlane-grid · Schedule / How parts connect
+  Use when: two or more people or teams work in parallel lanes across shared milestones, and a few hand-offs cross between lanes.
+  Not for: dated bars with durations (use a gantt) or one team's ordered steps (use a pipeline).
+  Fill: DATA.lanes {id, name, sub}, DATA.milestones (column names), DATA.cards {id, lane, m (milestone index), title, text}, DATA.handoffs {from, to, label}. DATA.chain links each card to the next one in its lane.
+-->
+<figure class="viz" id="sl-1" data-focus>
+  <style>
+    #sl-1 .e-line.is-handoff { stroke: var(--accent); }
+  </style>
+  <div class="viz-title">{{The point, e.g. "Only three hand-offs cross the lanes; everything else runs in parallel"}}</div>
+  <div class="viz-body"><svg role="img" aria-label="{{lanes, milestones and hand-offs}}"></svg></div>
+  <div class="focus-legend"><span><i style="--k:var(--accent)"></i>hand-off between lanes</span><span><i style="--k:var(--muted)"></i>next in the same lane</span></div>
+  <p class="viz-note">{{How to read it, e.g. "Milestones are sync points, not dates: each ends with both lanes green on the 100-question run"}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    lanes: [
+      { id: 'A', name: 'Dev A', sub: 'search' },
+      { id: 'B', name: 'Dev B', sub: 'agent' }
+    ],
+    milestones: ['M1 · Foundation', 'M2 · Candidates', 'M3 · Ranking', 'M4 · Rollout'],
+    cards: [
+      { id: 'A1', lane: 'A', m: 0, title: 'R1 – R2', text: 'table cards, typed links, 3.2 GB re-built' },
+      { id: 'A2', lane: 'A', m: 1, title: 'R3 – R5', text: 'likely questions, candidate search' },
+      { id: 'A3', lane: 'A', m: 2, title: 'R6', text: 'ranking call, top 20 of 300 in 1.4 s' },
+      { id: 'A4', lane: 'A', m: 3, title: 'R9', text: 'rollout behind a flag, 10% of pods' },
+      { id: 'B1', lane: 'B', m: 0, title: 'R4', text: 'embedding migration, Runner on 4 pods' },
+      { id: 'B2', lane: 'B', m: 1, title: 'R7', text: 'dataset pack in the Payload bucket' },
+      { id: 'B3', lane: 'B', m: 2, title: 'R8', text: 'Deep agent calls search_context(q)' },
+      { id: 'B4', lane: 'B', m: 3, title: 'QA', text: '100-question run: found 82 of 100' }
+    ],
+    handoffs: [
+      { from: 'B1', to: 'A2', label: 'vectors ready' },
+      { from: 'A3', to: 'B3', label: 'ranked list API' },
+      { from: 'B3', to: 'A4', label: 'agent calls it' }
+    ],
+    chain: true
+  };
+  var fig = document.getElementById('sl-1'), svg = fig.querySelector('svg'), NS = 'http://www.w3.org/2000/svg';
+  function mk(t, a, p, txt) { var el = document.createElementNS(NS, t); for (var k in a) el.setAttribute(k, a[k]); if (txt != null) el.textContent = txt; (p || svg).appendChild(el); return el; }
+  function wrap(s, max) { var out = [''], w = s.split(' '); w.forEach(function (x) { var l = out[out.length - 1]; if ((l + ' ' + x).trim().length > max && l) out.push(x); else out[out.length - 1] = (l + ' ' + x).trim(); }); return out; }
+  var headW = 150, colW = 270, cW = 242, cH = 92, laneGap = 120, top = 44, byId = {}, laneIx = {};
+  DATA.lanes.forEach(function (l, i) { laneIx[l.id] = i; });
+  var W = headW + DATA.milestones.length * colW, H = top + DATA.lanes.length * cH + (DATA.lanes.length - 1) * laneGap + 16;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.style.minWidth = '800px';
+  mk('defs', {}).innerHTML =
+    '<marker id="sl-1-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" style="fill:var(--muted)"/></marker>' +
+    '<marker id="sl-1-arrow-acc" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" style="fill:var(--accent)"/></marker>';
+  DATA.milestones.forEach(function (m, i) {
+    var x = headW + i * colW;
+    mk('text', { x: x + 4, y: 18, 'class': 'm', style: 'font-family:var(--font-mono);font-weight:600;letter-spacing:.1em' }, null, m.toUpperCase());
+    if (i) mk('line', { x1: x - (colW - cW) / 2, y1: 30, x2: x - (colW - cW) / 2, y2: H - 4, style: 'stroke:var(--line)' });
+  });
+  DATA.lanes.forEach(function (l, i) {
+    var y = top + i * (cH + laneGap);
+    mk('text', { x: 0, y: y + cH / 2 - 2, style: 'font-family:var(--font-display);font-weight:700;font-size:16px' }, null, l.name);
+    mk('text', { x: 0, y: y + cH / 2 + 17, 'class': 'm', style: 'font-size:12.5px' }, null, l.sub);
+  });
+  var gE = mk('g', {}), gN = mk('g', {});
+  DATA.cards.forEach(function (c) { c.x = headW + c.m * colW; c.y = top + laneIx[c.lane] * (cH + laneGap); byId[c.id] = c; });
+  if (DATA.chain) DATA.lanes.forEach(function (l) {
+    var row = DATA.cards.filter(function (c) { return c.lane === l.id; }).sort(function (a, b) { return a.m - b.m; });
+    row.forEach(function (c, i) { var n = row[i + 1]; if (!n) return;
+      mk('line', { x1: c.x + cW + 3, y1: c.y + cH / 2, x2: n.x - 3, y2: n.y + cH / 2, 'class': 'e-line', 'data-edge': c.id + '>' + n.id, 'marker-end': 'url(#sl-1-arrow)' }, gE); });
+  });
+  DATA.handoffs.forEach(function (h) {
+    var a = byId[h.from], b = byId[h.to], down = b.y > a.y;
+    var x1 = a.x + cW * (a.m === b.m ? 0.5 : 0.55), y1 = down ? a.y + cH : a.y, x2 = b.x + cW * (a.m === b.m ? 0.5 : 0.35), y2 = down ? b.y - 3 : b.y + cH + 3, k = (y2 - y1) * 0.55;
+    var g = mk('g', { 'data-edge': h.from + '>' + h.to, 'data-tip': h.from + ' hands ' + h.to + ': ' + h.label }, gE);
+    mk('path', { d: 'M' + x1 + ',' + y1 + ' C' + x1 + ',' + (y1 + k) + ' ' + x2 + ',' + (y2 - k) + ' ' + x2 + ',' + y2, 'class': 'e-line is-handoff', 'marker-end': 'url(#sl-1-arrow-acc)' }, g);
+    mk('text', { x: (x1 + x2) / 2 + (a.m === b.m ? -8 : 0), y: (y1 + y2) / 2 + 4, 'text-anchor': a.m === b.m ? 'end' : 'middle', style: 'fill:var(--accent);font-size:12.5px;font-weight:500;paint-order:stroke;stroke:var(--surface);stroke-width:5px;stroke-linejoin:round' }, g, h.label);
+  });
+  DATA.cards.forEach(function (c) {
+    var g = mk('g', { transform: 'translate(' + c.x + ',' + c.y + ')', 'data-node': c.id, 'data-label': c.title + ' · ' + c.text }, gN);
+    mk('rect', { width: cW, height: cH, rx: 6, 'class': 'n-box' }, g);
+    mk('text', { x: 14, y: 24, style: 'font-family:var(--font-mono);font-weight:600;font-size:12.5px' }, g, c.title);
+    wrap(c.text, 33).slice(0, 3).forEach(function (line, i) { mk('text', { x: 14, y: 46 + i * 18, 'class': 'm', style: 'font-size:12.5px' }, g, line); });
+  });
+})();
+</script>

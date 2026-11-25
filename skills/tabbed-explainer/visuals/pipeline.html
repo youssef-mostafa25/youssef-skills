@@ -1,0 +1,71 @@
+<!--
+  pipeline · Steps / how parts connect
+  Use when: work runs as a chain of stages, often in two rows that happen at different times (once at build, then on every request), and a few stages are the new or key ones.
+  Not for: who-calls-whom between services (use a sequence) or the same flow before and after a change (use today-after).
+  Fill: DATA.rows, each {label, color, boxes: [{id, title, sub?, key?}]} — boxes in a row are chained left to right, \n breaks a sub line, key: true (or a colour) rings the box; DATA.links adds dashed links across rows as [fromId, toId].
+-->
+<figure class="viz" id="pipe-1" data-focus>
+  <style>
+    :where(#pipe-1) .key > .n-box { stroke: var(--k); stroke-width: 2.4; }
+    #pipe-1 .e-line.cross { stroke-dasharray: 5 4; }
+  </style>
+  <div class="viz-title">{{The point of the pipeline, e.g. "Three new build stages buy one ranking call per question"}}</div>
+  <div class="viz-body"><svg role="img" aria-label="{{what the pipeline shows}}"></svg></div>
+  <div class="focus-legend"><span><i style="--k:var(--up)"></i>feeds it</span><span><i style="--k:var(--down)"></i>it feeds</span><span>ringed · new or key stage</span></div>
+  <p class="viz-note">{{How to read it, e.g. "The top row runs once per dataset; the bottom row on every question and reads what the top row built."}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    rows: [
+      { label: 'Once, when a source is added (~55 s, ~$0.30 per dataset)', color: 'var(--good)', boxes: [
+        { id: 'catalogue', title: 'Catalogue', sub: 'tables, columns, rules…' },
+        { id: 'cards', title: 'Table cards', sub: '+ typed links', key: true },
+        { id: 'likely', title: 'Likely questions', sub: 'written by a small model', key: true },
+        { id: 'embed', title: 'Embed', sub: 'one vector per item', key: true },
+        { id: 'graph', title: 'Graph', sub: 'items + extra vectors' }
+      ] },
+      { label: 'Every question (≈ 2.1 s)', color: 'var(--accent)', boxes: [
+        { id: 'question', title: 'Question', sub: 'as the user' },
+        { id: 'search', title: 'Search', sub: 'words, meaning, links,\nlikely questions' },
+        { id: 'cands', title: 'Candidates', sub: 'cards, linked items,\ndataset pack' },
+        { id: 'rank', title: 'One ranking call', sub: 'fast model,\n40 in, 20 out', key: 'var(--c4)' },
+        { id: 'agent', title: 'Up to 20 to the agent', sub: '+ needed companions,\nalways-on rules' }
+      ] }
+    ],
+    links: [['graph', 'search']]
+  };
+  var fig = document.getElementById('pipe-1'), svg = fig.querySelector('svg'), NS = 'http://www.w3.org/2000/svg';
+  function mk(t, a, parent, text) { var el = document.createElementNS(NS, t); for (var k in a) el.setAttribute(k, a[k]); if (text != null) el.textContent = text; (parent || svg).appendChild(el); return el; }
+  var W = 1200, gap = 40, lineH = 17, y = 2, at = {};
+  var gE = mk('g', {}), gN = mk('g', {}), gL = mk('g', {});
+  mk('defs', {}).innerHTML = '<marker id="pipe-1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker>';
+  DATA.rows.forEach(function (row, ri) {
+    mk('text', { x: 0, y: y + 13, style: 'fill:' + row.color + ';font-family:var(--font-mono);font-weight:600;font-size:12.5px;letter-spacing:.08em' }, gL, row.label.toUpperCase());
+    y += 26;
+    var n = row.boxes.length, bw = (W - (n - 1) * gap) / n;
+    var lines = Math.max.apply(null, row.boxes.map(function (b) { return b.sub ? b.sub.split('\n').length : 0; }));
+    var bh = 36 + lines * lineH + 6;
+    row.boxes.forEach(function (b, i) {
+      var x = i * (gap + bw);
+      at[b.id] = { x: x, y: y, w: bw, h: bh };
+      var g = mk('g', { 'data-node': b.id, 'data-label': b.title, 'class': b.key ? 'key' : '', style: '--k:' + (typeof b.key === 'string' ? b.key : row.color) }, gN);
+      mk('rect', { x: x, y: y, width: bw, height: bh, rx: 9, 'class': 'n-box' }, g);
+      var subs = b.sub ? b.sub.split('\n') : [], top = y + (bh - (22 + subs.length * lineH)) / 2;
+      mk('text', { x: x + bw / 2, y: top + 15, 'text-anchor': 'middle', style: 'font-weight:600;font-size:15px' }, g, b.title);
+      subs.forEach(function (s, j) { mk('text', { x: x + bw / 2, y: top + 34 + j * lineH, 'text-anchor': 'middle', 'class': 'm', style: 'font-size:13px' }, g, s); });
+      if (i > 0) {
+        var p = row.boxes[i - 1].id, mid = y + bh / 2;
+        mk('path', { d: 'M' + (x - gap + 4) + ',' + mid + ' H' + (x - 4), 'class': 'e-line', 'data-edge': p + '>' + b.id, 'marker-end': 'url(#pipe-1-arrow)' }, gE);
+      }
+    });
+    y += bh + (ri < DATA.rows.length - 1 ? 34 : 4);
+  });
+  (DATA.links || []).forEach(function (l) {
+    var a = at[l[0]], b = at[l[1]], sx = a.x + a.w / 2, tx = b.x + b.w / 2, top = Math.min(a.y, b.y) === a.y;
+    var sy = top ? a.y + a.h + 2 : a.y - 2, ty = top ? b.y - 4 : b.y + b.h + 4, hy = top ? a.y + a.h + 16 : a.y - 16;
+    mk('path', { d: 'M' + sx + ',' + sy + ' V' + hy + ' H' + tx + ' V' + ty, 'class': 'e-line cross', 'data-edge': l[0] + '>' + l[1], 'marker-end': 'url(#pipe-1-arrow)' }, gE);
+  });
+  svg.setAttribute('viewBox', '-2 -2 ' + (W + 4) + ' ' + (y + 2)); svg.style.minWidth = '820px';
+})();
+</script>

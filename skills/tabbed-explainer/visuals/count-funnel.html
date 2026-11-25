@@ -1,0 +1,51 @@
+<!--
+  count-funnel · Steps / Parts of a whole
+  Use when: a count shrinks through stages (options considered → built → tested → recommended) and the reader follows how many survived each cut.
+  Not for: shares of one total (use stacked-rows) or stages that need durations or owners (use pipeline or step-durations).
+  Fill: the DATA object: stages {id, n, label, detail?: [lines], tone?: 'accent'|'good'}. tone rings the stages to call out.
+  Hover a stage to light its chain; on narrow screens the boxes stack top to bottom.
+-->
+<figure class="viz" id="cf-1" data-focus>
+  <style>
+    #cf-1 .cf-row { display: flex; align-items: stretch; padding: 4px; }
+    #cf-1 .cf-box { flex: 1 1 0; min-width: 0; background: var(--surface); border: 1.5px solid var(--line); border-radius: 12px; padding: 16px 10px;
+      display: grid; align-content: center; justify-items: center; gap: 2px; text-align: center; }
+    #cf-1 .cf-box.is-accent { border: 2px solid var(--c4); }
+    #cf-1 .cf-box.is-good { border: 2px solid var(--good); }
+    #cf-1 .cf-n { font-family: var(--font-display); font-weight: 700; font-size: 34px; line-height: 1.1; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+    #cf-1 .cf-lab { font-size: 15px; }
+    #cf-1 .cf-det { font-size: 13.5px; color: var(--muted); line-height: 1.4; }
+    #cf-1 .cf-arrow { flex: 0 0 40px; align-self: center; display: flex; justify-content: center; }
+    #cf-1 .cf-arrow svg { width: 40px; height: 14px; overflow: visible; }
+    @media (max-width: 640px) {
+      #cf-1 .cf-row { flex-direction: column; }
+      #cf-1 .cf-arrow { flex-basis: 32px; }
+      #cf-1 .cf-arrow svg { transform: rotate(90deg); width: 32px; }
+    }
+  </style>
+  <div class="viz-title">{{The point of the funnel, e.g. "14 designs narrowed to one recommendation"}}</div>
+  <div class="viz-body"><div class="cf-row" role="img"></div></div>
+  <p class="viz-note">{{How to read it, e.g. "Each stage kept only what earned its place in the stage before."}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    stages: [
+      { id: 'considered', n: 14, label: 'search designs considered', detail: ['frameworks + papers'] },
+      { id: 'built', n: 4, label: 'built as prototypes', detail: ['+ today’s search as yardstick'], tone: 'accent' },
+      { id: 'addons', n: 9, label: 'ranker add-ons tested', detail: ['rerank, pin, merge, rewrite', '+ 4 tunings in rounds 2–3'] },
+      { id: 'outside', n: 2, label: 'outside products', detail: ['1 run, 1 researched'] },
+      { id: 'pick', n: 1, label: 'recommended', detail: ['ranked cards, rank + pin'], tone: 'good' }
+    ]
+  };
+  var fig = document.getElementById('cf-1'), row = fig.querySelector('.cf-row');
+  row.setAttribute('aria-label', DATA.stages.map(function (s) { return s.n + ' ' + s.label; }).join(', then '));
+  row.innerHTML = DATA.stages.map(function (s, i) {
+    var arrow = i ? '<span class="cf-arrow" data-edge="' + DATA.stages[i - 1].id + '>' + s.id + '"><svg viewBox="0 0 40 14" aria-hidden="true">' +
+      '<line class="e-line" x1="4" y1="7" x2="31" y2="7"/><path d="M30,2 L38,7 L30,12 z" style="fill:var(--muted)"/></svg></span>' : '';
+    return arrow + '<div class="cf-box' + (s.tone ? ' is-' + s.tone : '') + '" data-node="' + s.id + '" data-label="' + s.n + ' ' + s.label + '">' +
+      '<div class="cf-n">' + s.n + '</div><div class="cf-lab">' + s.label + '</div>' +
+      (s.detail || []).map(function (d) { return '<div class="cf-det">' + d + '</div>'; }).join('') + '</div>';
+  }).join('');
+})();
+</script>

@@ -1,0 +1,70 @@
+<!--
+  bars-limit · Compare options / Status
+  Use when: several values sit against one hard limit and the reader must see which cross it (memory per step vs a pod limit, time vs a timeout).
+  Not for: values with no threshold (use progress-list or step-durations) or shares of a total (use stacked-rows).
+  Fill: the DATA object: limit, limitLabel, unit, rows {label, value}. Rows are in order; the first row past the limit turns red with ✕,
+  rows after it are striped (what would happen if it had survived). Set DATA.after to 'solid' to keep later rows plain.
+-->
+<figure class="viz" id="bl-1">
+  <style>
+    #bl-1 .bl-rows { display: grid; grid-template-columns: fit-content(38%) minmax(0, 1fr) max-content; column-gap: 18px; align-items: center; }
+    #bl-1 .bl-lab { font-size: 14px; padding-block: 7px; }
+    #bl-1 .bl-lab.is-muted { color: var(--muted); }
+    #bl-1 .bl-cell { position: relative; padding-block: 7px; }
+    #bl-1 .bl-track { height: 18px; border-radius: 5px; background: var(--sunk); position: relative; }
+    #bl-1 .bl-bar { position: absolute; inset: 0 auto 0 0; border-radius: 5px; background: var(--c4); }
+    #bl-1 .bl-bar.is-over { background: var(--bad); }
+    #bl-1 .bl-bar.is-after { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--muted) 38%, transparent) 0 4px, transparent 4px 9px); border: 1px dashed var(--muted); }
+    #bl-1 .bl-limit { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--bad); pointer-events: none; }
+    #bl-1 .bl-val { font-family: var(--font-mono); font-size: 13px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    #bl-1 .bl-val.is-muted { color: var(--muted); }
+    #bl-1 .bl-key-line { display: inline-block; width: 2px; height: 12px; background: var(--bad); margin-right: 6px; vertical-align: -1px; }
+    #bl-1 .bl-key-stripe { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--muted) 45%, transparent) 0 2px, transparent 2px 5px) !important; outline: 1px dashed var(--muted); outline-offset: -1px; }
+  </style>
+  <div class="viz-title">{{The point of the chart, e.g. "The pod dies at embed batch, the first step past its 1,600 MB limit"}}</div>
+  <div class="viz-body"><div class="bl-rows" role="img"></div></div>
+  <div class="viz-key"></div>
+  <p class="viz-note">{{How to read it, e.g. "Red line: pod limit 1,600 MB. Striped bars never happen at that limit, because the pod is already dead; they show what a bigger pod has to survive."}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    unit: 'MB',
+    limit: 1600,
+    limitLabel: 'pod limit',
+    after: 'striped',
+    rows: [
+      { label: 'idle runner', value: 420 },
+      { label: 'fetch tables', value: 980 },
+      { label: 'build cards', value: 1240 },
+      { label: 'embed batch', value: 1780 },
+      { label: 'write index', value: 2050 },
+      { label: 'upload to payload bucket', value: 1310 },
+      { label: 'warm cache', value: 1150 }
+    ]
+  };
+  var fig = document.getElementById('bl-1'), box = fig.querySelector('.bl-rows');
+  var fmt = function (v) { return v.toLocaleString('en-US') + ' ' + DATA.unit; };
+  var max = Math.max(DATA.limit, Math.max.apply(null, DATA.rows.map(function (r) { return r.value; }))) * 1.04;
+  var pct = function (v) { return (v / max * 100).toFixed(2) + '%'; };
+  var crossed = -1;
+  DATA.rows.forEach(function (r, i) { if (crossed < 0 && r.value > DATA.limit) crossed = i; });
+  box.setAttribute('aria-label', 'Bars per row against a ' + DATA.limitLabel + ' of ' + fmt(DATA.limit));
+  var html = '';
+  DATA.rows.forEach(function (r, i) {
+    var state = i === crossed ? 'over' : (crossed >= 0 && i > crossed && DATA.after !== 'solid') ? 'after' : '';
+    var muted = state === 'after' ? ' is-muted' : '';
+    var diff = r.value - DATA.limit;
+    var tip = r.label + ': ' + fmt(r.value) + (diff > 0 ? ' (' + fmt(diff) + ' over the limit)' : ' (' + fmt(-diff) + ' under the limit)') + (state === 'after' ? '\nnever reached at this limit' : '');
+    html += '<div class="bl-lab' + muted + '">' + r.label + (state === 'over' ? ' ✕' : '') + '</div>' +
+      '<div class="bl-cell"><div class="bl-track"><div class="bl-bar' + (state ? ' is-' + state : '') + '" style="width:' + pct(r.value) + '" data-tip="' + tip.replace(/"/g, '&quot;') + '"></div></div>' +
+      '<div class="bl-limit" style="left:' + pct(DATA.limit) + '"></div></div>' +
+      '<div class="bl-val' + muted + '">' + fmt(r.value) + '</div>';
+  });
+  box.innerHTML = html;
+  var key = '<span><span class="bl-key-line"></span>' + DATA.limitLabel + ' ' + fmt(DATA.limit) + '</span><span><i style="--k:var(--c4)"></i>under the limit</span>';
+  if (crossed >= 0) key += '<span><i style="--k:var(--bad)"></i>first past the limit ✕</span>';
+  if (crossed >= 0 && crossed < DATA.rows.length - 1 && DATA.after !== 'solid') key += '<span><i class="bl-key-stripe"></i>would come after</span>';
+  fig.querySelector('.viz-key').innerHTML = key;
+})();
+</script>

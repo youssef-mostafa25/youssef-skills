@@ -1,0 +1,111 @@
+<!--
+  case-timelines · Timeline / Who calls whom
+  Use when: the same run is told twice, side by side (one case survives, one fails), step by step with who handles each step, and memory or size at the steps that matter.
+  Not for: one run with no comparison (use sequence-phased), or only the numbers over steps (use multi-line).
+  Fill: the DATA object only: actors {key: {name, color}}, mem {max, limit, label, unit}, and cases [{tone, eyebrow, title, sub, steps}].
+  A step: {group?, groupTone?, n?, actors: [keys], size?, title, detail?, note?, mem?, kind?: 'fail' | 'after'}. `code` in text becomes inline code.
+  Hover a step: the steps before it ring blue and the steps after it ring red; the other case fades.
+-->
+<figure class="viz" id="ct-1" data-focus>
+  <style>
+    #ct-1 .ct-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 16px; align-items: start; }
+    #ct-1 .ct-case { border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 8px; min-width: 0; }
+    #ct-1 .ct-eye { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; }
+    #ct-1 .ct-head { font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-top: 2px; }
+    #ct-1 .ct-sub { font-size: 13px; color: var(--muted); padding-bottom: 10px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+    #ct-1 .ct-group { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 10px 0 8px 44px; }
+    #ct-1 .ct-step { display: grid; grid-template-columns: 30px minmax(0, 1fr); column-gap: 14px; position: relative; padding-bottom: 14px; }
+    #ct-1 .ct-dot { width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid var(--k); display: grid; place-items: center; font: 600 11px var(--font-mono); color: var(--k); background: var(--surface); position: relative; z-index: 1; }
+    #ct-1 .ct-fail .ct-dot { background: var(--bad); border-color: var(--bad); color: var(--surface); font-size: 16px; font-weight: 700; }
+    #ct-1 .ct-after .ct-dot { border-style: dashed; }
+    #ct-1 .ct-rail { position: absolute; left: 13.5px; top: 30px; bottom: 0; width: 3px; background: color-mix(in srgb, var(--k) 60%, transparent); }
+    #ct-1 .ct-after .ct-rail { background: transparent; }
+    #ct-1 .ct-body { display: grid; gap: 3px; min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+    #ct-1 .ct-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-family: var(--font-mono); font-size: 12px; min-height: 30px; }
+    #ct-1 .ct-pill { border: 1.5px solid var(--k); color: color-mix(in srgb, var(--k) 72%, var(--ink)); border-radius: 999px; padding: 0 8px; line-height: 20px; font-weight: 500; }
+    #ct-1 .ct-size { background: var(--bad-soft); color: var(--bad); border-radius: 999px; padding: 0 8px; line-height: 20px; font-weight: 600; }
+    #ct-1 .ct-ref { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+    #ct-1 .ct-title { font-weight: 600; font-size: 15.5px; }
+    #ct-1 .ct-fail .ct-title { color: var(--bad); }
+    #ct-1 .ct-note { color: var(--muted); }
+    #ct-1 .ct-body code { background: var(--sunk); border-radius: 4px; padding: 0 4px; }
+    #ct-1 .ct-mem { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; margin-top: 5px; font-family: var(--font-mono); font-size: 12px; }
+    #ct-1 .ct-track { position: relative; height: 8px; border-radius: 4px; background: var(--sunk); }
+    #ct-1 .ct-track i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+    #ct-1 .ct-track b { position: absolute; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--ink); }
+  </style>
+  <div class="viz-title">{{The point of the comparison, e.g. "At 150,000 tables the agent is killed before a single card is saved"}}</div>
+  <div class="viz-body"><div class="ct-cols"></div></div>
+  <div class="viz-key"></div>
+  <p class="viz-note">{{How to read it, e.g. "Each circle is a step, coloured by who handles it. Bars show agent memory against the pod limit (the tick). Hover a step to trace what led to it and what followed."}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    actors: {
+      db: { name: 'Database', color: 'var(--c6)' },
+      runner: { name: 'Runner', color: 'var(--c2)' },
+      agent: { name: 'Deep agent', color: 'var(--c3)' },
+      bucket: { name: 'Payload bucket', color: 'var(--c5)' },
+      api: { name: 'Agent API', color: 'var(--c4)' },
+      browser: { name: 'Browser', color: 'var(--c1)' },
+      k8s: { name: 'Kubernetes', color: 'var(--muted)' }
+    },
+    mem: { max: 2600, limit: 1536, label: 'agent', unit: ' MB' },
+    cases: [
+      { tone: 'good', eyebrow: 'Case A · survives', title: '40,000 tables · 31 MB of cards', sub: 'Pod limit 1536 MB. Every card reaches the index.', steps: [
+        { group: 'In the runner', n: 11, actors: ['db', 'runner'], title: 'Read the table list', detail: '40,000 tables, one at a time off the cursor', note: 'The runner stops at `MAX_TABLES` (200,000). Its memory stays flat.' },
+        { n: 12, actors: ['runner'], size: '31 MB', title: 'Spooled to a temp file', detail: '`cards-json-*` on the runner disk', note: 'Nothing is sent until the whole read has finished.' },
+        { n: 13, actors: ['runner', 'agent'], size: '31 MB', title: 'Sent as one HTTP response', detail: 'chunked JSON body, no gzip, no paging' },
+        { group: 'In the agent', n: 14, actors: ['agent'], title: 'Received and parsed', detail: 'bytes + a decoded string + 40,000 dicts', mem: 657 },
+        { n: 15, actors: ['agent'], title: 'Embedded in batches of 256', detail: '40,000 vectors of 1,024 floats', mem: 830 },
+        { n: 17, actors: ['agent'], title: 'Ranked against likely questions: the peak', detail: 'every card scored once, top 30 kept', mem: 974 },
+        { n: 18, actors: ['agent', 'bucket'], size: '12 MB', title: 'Saved to the payload bucket', detail: '`cards/{id}.json`, all tables', mem: 693 },
+        { group: 'In the browser', n: 21, actors: ['api', 'browser'], title: 'Results sent over the WebSocket', detail: 'the top 30 cards in one `send_json`' },
+        { n: 23, actors: ['browser'], title: 'Shown as ranked cards', detail: 'kept for the whole chat' }
+      ] },
+      { tone: 'bad', eyebrow: 'Case B · OOMKilled', title: '150,000 tables · 118 MB of cards', sub: 'Pod limit 1536 MB. The cards never get past the agent.', steps: [
+        { group: 'In the runner', n: 11, actors: ['db', 'runner'], title: 'Read the table list', detail: '150,000 tables, one at a time off the cursor', note: 'The runner stops at `MAX_TABLES` (200,000). Its memory stays flat.' },
+        { n: 12, actors: ['runner'], size: '118 MB', title: 'Spooled to a temp file', detail: '`cards-json-*` on the runner disk' },
+        { n: 13, actors: ['runner', 'agent'], size: '118 MB', title: 'Sent as one HTTP response', detail: 'chunked JSON body, no gzip, no paging' },
+        { group: 'In the agent', n: 14, actors: ['agent'], title: 'Received and parsed', detail: 'bytes + a decoded string + 150,000 dicts', mem: 1141 },
+        { n: 15, actors: ['agent'], kind: 'fail', title: 'OOMKilled while embedding', detail: 'a second copy of 150,000 dicts + the vector buffer', note: 'Needs about 1,708 MB; the cgroup allows 1,536.', mem: 1708 },
+        { group: 'After the kill', groupTone: 'bad', kind: 'after', actors: ['agent'], title: 'SIGKILL: no cleanup runs', note: 'The kernel stops the process the moment it goes over its limit (exit 137). No `finally` runs, so nothing is logged.' },
+        { kind: 'after', actors: ['bucket'], title: 'The cards are gone', note: 'Nothing reached the bucket: the first write comes after ranking (step 18).' },
+        { kind: 'after', actors: ['api'], title: "Every other user's search dies too", note: 'One worker on one replica: every open WebSocket on the pod closes.' },
+        { kind: 'after', actors: ['k8s'], title: 'The container restarts', note: 'restartCount +1. The first readiness check comes after 10 s.' },
+        { kind: 'after', actors: ['browser'], title: 'Stuck on "searching"', note: 'Only a `final_response` clears the spinner, and none ever comes.' }
+      ] }
+    ]
+  };
+  var fig = document.getElementById('ct-1'), cols = fig.querySelector('.ct-cols'), M = DATA.mem;
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function rich(s) { return esc(s).replace(/`([^`]+)`/g, '<code>$1</code>'); }
+  function num(v) { return Math.round(v).toLocaleString('en-US'); }
+  cols.innerHTML = DATA.cases.map(function (c, ci) {
+    var html = '<div class="ct-case"><div class="ct-eye" style="color:var(--' + c.tone + ')">' + esc(c.eyebrow) + '</div><div class="ct-head">' + esc(c.title) + '</div><div class="ct-sub">' + esc(c.sub) + '</div>';
+    c.steps.forEach(function (s, i) {
+      var id = 'c' + ci + '-' + i, last = s.actors[s.actors.length - 1], k = (DATA.actors[last] || {}).color || 'var(--muted)', next = c.steps[i + 1];
+      if (s.group) html += '<div class="ct-group"' + (s.groupTone ? ' style="color:var(--' + s.groupTone + ')"' : '') + '>' + esc(s.group) + '</div>';
+      var mark = s.kind === 'fail' ? '✕' : s.kind === 'after' ? '' : (s.n != null ? s.n : '');
+      html += '<div class="ct-step' + (s.kind ? ' ct-' + s.kind : '') + '" style="--k:' + k + '" data-node="' + id + '" data-label="' + esc(c.eyebrow + ' · ' + (s.n != null ? 'step ' + s.n + ' · ' : '') + s.title) + '">';
+      html += '<div class="ct-dot">' + mark + '</div>';
+      if (next) html += '<div class="ct-rail" data-edge="' + id + '>c' + ci + '-' + (i + 1) + '"></div>';
+      html += '<div class="ct-body"><div class="ct-meta">' + s.actors.map(function (a) { var A = DATA.actors[a]; return '<span class="ct-pill" style="--k:' + A.color + '">' + esc(A.name) + '</span>'; }).join('<span>→</span>');
+      if (s.size) html += '<span class="ct-size">' + esc(s.size) + '</span>';
+      if (s.n != null) html += '<span class="ct-ref">step ' + s.n + '</span>';
+      html += '</div><div class="ct-title">' + rich(s.title) + '</div>';
+      if (s.detail) html += '<div>' + rich(s.detail) + '</div>';
+      if (s.note) html += '<div class="ct-note">' + rich(s.note) + '</div>';
+      if (s.mem != null) {
+        var f = Math.min(s.mem / M.max, 1), fill = s.mem >= M.limit ? 'var(--bad)' : s.mem >= M.limit * 0.7 ? 'var(--warn)' : 'var(--good)';
+        html += '<div class="ct-mem" data-tip="' + num(s.mem) + M.unit + ' of the ' + num(M.limit) + M.unit + ' limit (' + Math.round(s.mem / M.limit * 100) + '%)"><div class="ct-track"><i style="width:' + (f * 100) + '%;background:' + fill + '"></i><b style="left:' + (M.limit / M.max * 100) + '%"></b></div><span>' + esc(M.label) + ' ' + num(s.mem) + M.unit + '</span></div>';
+      }
+      html += '</div></div>';
+    });
+    return html + '</div>';
+  }).join('');
+  fig.querySelector('.viz-key').innerHTML = Object.keys(DATA.actors).map(function (a) { return '<span><i style="--k:' + DATA.actors[a].color + ';border-radius:50%"></i>' + esc(DATA.actors[a].name) + '</span>'; }).join('') +
+    '<span><i style="--k:transparent;border:2px dashed var(--muted);border-radius:50%"></i>after-effect</span>';
+})();
+</script>

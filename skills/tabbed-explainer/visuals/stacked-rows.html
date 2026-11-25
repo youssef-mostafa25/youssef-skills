@@ -1,0 +1,66 @@
+<!--
+  stacked-rows · Parts of a whole / Compare options
+  Use when: several options each split the same total into the same named parts (of 100 right items: found / dropped / never reached / missing) and the reader compares the splits row by row.
+  Not for: values that do not add up to a whole (use progress-list or bars-limit). One row is fine for a single total.
+  Fill: the DATA object: scaleLabel, series {name, color} and rows {label, values: one number per series}.
+  Each block shows "value name" when it fits, else just the value, else nothing (hover still shows it).
+-->
+<figure class="viz" id="sr-1">
+  <style>
+    #sr-1 .sr-grid { display: grid; grid-template-columns: fit-content(32%) minmax(0, 1fr); column-gap: 24px; row-gap: 12px; align-items: center; }
+    #sr-1 .sr-scale { grid-column: 2; font-family: var(--font-mono); font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    #sr-1 .sr-lab { font-size: 15px; }
+    #sr-1 .sr-bar { display: flex; gap: 3px; height: 36px; }
+    #sr-1 .sr-seg { min-width: 6px; border-radius: 5px; overflow: hidden; display: flex; align-items: center; padding-inline: 10px; color: var(--surface);
+      font-family: var(--font-display); font-weight: 700; font-size: 15px; white-space: nowrap; }
+    #sr-1 .sr-key { grid-column: 2; display: flex; flex-wrap: wrap; gap: 6px 26px; font-size: 14px; color: var(--muted); padding-top: 4px; }
+    #sr-1 .sr-key i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; background: var(--k); margin-right: 8px; vertical-align: -2px; }
+    @media (max-width: 560px) { #sr-1 .sr-grid { grid-template-columns: minmax(0, 1fr); row-gap: 4px; } #sr-1 .sr-scale, #sr-1 .sr-key { grid-column: 1; } #sr-1 .sr-lab { margin-top: 8px; } }
+  </style>
+  <div class="viz-title">{{The point of the chart, e.g. "Rank + pin finds 76 of 100; the old search never even reaches half of them"}}</div>
+  <div class="viz-body"><div class="sr-grid" role="img"></div></div>
+  <p class="viz-note">{{How to read it, e.g. "Out of 735 right items across all test searches. Each row adds up to 100."}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    scaleLabel: 'Where the right items end up, of 100',
+    series: [
+      { name: 'found', color: 'var(--c4)' },
+      { name: 'dropped by the ranker', color: 'var(--c2)' },
+      { name: 'never reached the candidates', color: 'var(--c6)' },
+      { name: 'not in the index', color: 'var(--bad)' }
+    ],
+    rows: [
+      { label: 'Rank + pin, cards', values: [76, 9, 15, 0] },
+      { label: 'Ranked cards, old index', values: [58, 8, 20, 14] },
+      { label: 'Old search + rank and pin', values: [36, 2, 48, 14] },
+      { label: 'Old search as written', values: [24, 0, 62, 14] }
+    ]
+  };
+  var fig = document.getElementById('sr-1'), grid = fig.querySelector('.sr-grid');
+  grid.setAttribute('aria-label', DATA.scaleLabel + ': ' + DATA.rows.map(function (r) { return r.label + ' ' + r.values.join('/'); }).join('; '));
+  var html = '<div class="sr-scale">' + DATA.scaleLabel + '</div>';
+  DATA.rows.forEach(function (r) {
+    var sum = r.values.reduce(function (s, v) { return s + v; }, 0);
+    html += '<div class="sr-lab">' + r.label + '</div><div class="sr-bar">' + r.values.map(function (v, i) {
+      if (!v) return '';
+      var s = DATA.series[i];
+      return '<div class="sr-seg" style="flex:' + v + ' 1 0;background:' + s.color + '" data-i="' + i + '" data-v="' + v + '" data-tip="' + r.label + '\n' + v + ' of ' + sum + ' ' + s.name + '"><span></span></div>';
+    }).join('') + '</div>';
+  });
+  html += '<div class="sr-key">' + DATA.series.map(function (s) { return '<span><i style="--k:' + s.color + '"></i>' + s.name + '</span>'; }).join('') + '</div>';
+  grid.innerHTML = html;
+  // Longest text that fits each block: "75 found", then "75", then nothing.
+  function fit() {
+    Array.prototype.forEach.call(grid.querySelectorAll('.sr-seg'), function (seg) {
+      var t = seg.firstChild, v = seg.getAttribute('data-v'), room = seg.clientWidth - 20;
+      if (room <= -20) return;
+      var tries = [v + ' ' + DATA.series[+seg.getAttribute('data-i')].name, v, ''];
+      for (var k = 0; k < tries.length; k++) { t.textContent = tries[k]; if (t.offsetWidth <= room) break; }
+    });
+  }
+  fit();
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(grid); else window.addEventListener('resize', fit);
+})();
+</script>

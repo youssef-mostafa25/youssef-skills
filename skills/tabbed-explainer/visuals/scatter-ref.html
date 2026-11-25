@@ -1,0 +1,74 @@
+<!--
+  scatter-ref · Compare options
+  Use when: many options are measured on two things at once (accuracy and time, cost and speed) and the question is which sit in the good corner, against a reference value.
+  Not for: one measure per option (use a bar chart), or values over time (multi-line).
+  Fill: the DATA object only: axis ranges and titles, groups {key: {name, color}}, ref {y, label, group}, points [{name, x, y, group, label?: 'right'|'left'|'above'|'below'}] and optional notes [{x, y, text}].
+-->
+<figure class="viz" id="sc-1">
+  <style>#sc-1 svg { min-width: 560px; } #sc-1 .viz-key i { border-radius: 50%; }</style>
+  <div class="viz-title">{{The point of the chart, e.g. "Every reranker is about 2 s faster than the LLM ranker and 6 to 14 points less accurate"}}</div>
+  <div class="viz-body"><svg role="img" aria-label="Scatter chart: each ranking option by median search time and accuracy, with a dashed line at the reference accuracy"></svg></div>
+  <div class="viz-key"></div>
+  <p class="viz-note">{{How to read it, e.g. "Up is more accurate on fresh questions; left is faster. Hover a dot for its name."}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    x: { min: 0, max: 3.5, step: 0.5, unit: ' s', decimals: 1, title: 'median search time' },
+    y: { min: 70, max: 100, step: 5, unit: '', decimals: 0, title: 'found, of 100' },
+    groups: {
+      llm: { name: 'LLM ranker (being built)', color: 'var(--c4)' },
+      hosted: { name: 'hosted reranker', color: 'var(--c1)' },
+      local: { name: 'air-gappable reranker', color: 'var(--c3)' },
+      none: { name: 'no ranker', color: 'var(--c6)' }
+    },
+    ref: { y: 96.3, label: "LLM ranker's accuracy (96.3)", group: 'llm' },
+    points: [
+      { name: 'LLM ranker, flash model', x: 3.27, y: 96.3, group: 'llm', label: 'below' },
+      { name: 'hosted-1', x: 1.07, y: 90.1, group: 'hosted' },
+      { name: 'hosted-2', x: 1.11, y: 89.7, group: 'hosted' },
+      { name: 'hosted-3', x: 1.27, y: 89.6, group: 'hosted' },
+      { name: 'hosted-4', x: 1.19, y: 87.4, group: 'hosted' },
+      { name: 'hosted-5', x: 1.11, y: 86.6, group: 'hosted' },
+      { name: 'hosted-6', x: 1.13, y: 86.6, group: 'hosted' },
+      { name: 'hosted-7', x: 1.18, y: 86.3, group: 'hosted' },
+      { name: 'hosted-8', x: 1.16, y: 82.0, group: 'hosted' },
+      { name: 'local-1', x: 1.68, y: 87.0, group: 'local' },
+      { name: 'local-2', x: 1.39, y: 85.7, group: 'local' },
+      { name: 'local-3', x: 1.23, y: 84.2, group: 'local' },
+      { name: 'local-4', x: 1.52, y: 83.1, group: 'local' },
+      { name: 'vector search only', x: 0.63, y: 73.4, group: 'none', label: 'right' }
+    ],
+    notes: [{ x: 1.25, y: 92.4, text: '12 rerankers' }]
+  };
+  var fig = document.getElementById('sc-1'), svg = fig.querySelector('svg'), NS = 'http://www.w3.org/2000/svg';
+  var W = 900, H = 400, L = 56, R = 24, T = 30, B = 56, pw = W - L - R, ph = H - T - B, ax = DATA.x, ay = DATA.y;
+  function X(v) { return L + (v - ax.min) / (ax.max - ax.min) * pw; }
+  function Y(v) { return T + ph - (v - ay.min) / (ay.max - ay.min) * ph; }
+  function mk(t, a, parent, text) { var el = document.createElementNS(NS, t); for (var k in a) el.setAttribute(k, a[k]); if (text != null) el.textContent = text; (parent || svg).appendChild(el); return el; }
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  mk('text', { x: 0, y: 12, 'class': 'm', style: 'font-weight:600' }, null, ay.title);
+  for (var v = ay.min; v <= ay.max + 1e-9; v += ay.step) {
+    mk('line', { x1: L, x2: L + pw, y1: Y(v), y2: Y(v), style: 'stroke:var(--line)' });
+    mk('text', { x: L - 10, y: Y(v) + 4, 'text-anchor': 'end', 'class': 'm' }, null, v.toFixed(ay.decimals) + ay.unit);
+  }
+  for (v = ax.min; v <= ax.max + 1e-9; v += ax.step) mk('text', { x: X(v), y: T + ph + 20, 'text-anchor': 'middle', 'class': 'm' }, null, v.toFixed(ax.decimals) + ax.unit);
+  mk('text', { x: L + pw / 2, y: H - 6, 'text-anchor': 'middle', 'class': 'm' }, null, ax.title);
+  if (DATA.ref) {
+    var rc = (DATA.groups[DATA.ref.group] || {}).color || 'var(--muted)';
+    mk('line', { x1: L, x2: L + pw, y1: Y(DATA.ref.y), y2: Y(DATA.ref.y), style: 'stroke:' + rc + ';stroke-width:1.4;stroke-dasharray:6 4' });
+    mk('text', { x: L + 8, y: Y(DATA.ref.y) - 8, style: 'fill:' + rc + ';font-size:13px' }, null, DATA.ref.label);
+  }
+  (DATA.notes || []).forEach(function (o) { mk('text', { x: X(o.x), y: Y(o.y), 'text-anchor': 'middle', 'class': 'm', style: 'font-size:12.5px' }, null, o.text); });
+  DATA.points.forEach(function (p) {
+    var col = DATA.groups[p.group].color, cx = X(p.x), cy = Y(p.y);
+    mk('circle', { cx: cx, cy: cy, r: p.label ? 8 : 7, style: 'fill:' + col + ';stroke:var(--surface);stroke-width:1.5',
+      'data-tip': p.name + '\n' + p.y.toFixed(1) + ay.unit + ' · ' + p.x.toFixed(2) + ax.unit + ' · ' + DATA.groups[p.group].name });
+    if (!p.label) return;
+    var pos = { right: [cx + 13, cy + 4, 'start'], left: [cx - 13, cy + 4, 'end'], above: [cx, cy - 13, 'middle'], below: [cx, cy + 23, 'middle'] }[p.label];
+    if (p.label === 'below' && cx > L + pw - 80) { pos[0] = cx - 4; pos[2] = 'end'; }
+    mk('text', { x: pos[0], y: pos[1], 'text-anchor': pos[2], style: 'fill:' + col + ';font-size:13px' }, null, p.name);
+  });
+  fig.querySelector('.viz-key').innerHTML = Object.keys(DATA.groups).map(function (k) { return '<span><i style="--k:' + DATA.groups[k].color + '"></i>' + DATA.groups[k].name + '</span>'; }).join('');
+})();
+</script>

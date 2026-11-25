@@ -27,6 +27,7 @@ To update later:
 | [resolve-pr-reviews](skills/resolve-pr-reviews/README.md) | Check, fix, answer and resolve a PR's review comments, from AI reviewers or people. | "fix the review on #123", "address copilot's comments" |
 | [handoff](skills/handoff/README.md) | Save where you are in a git-ignored `.handoffs/` folder, so another session can pick it up. | "write a handoff" |
 | [debug-log-sink](skills/debug-log-sink/README.md) | Collect debug logs from processes whose output you can't see, then clean up every trace. | "I can't see the worker's logs" |
+| [tabbed-explainer](skills/tabbed-explainer/README.md) | Get a tabbed HTML page that explains a subject plainly, with hand-picked visuals and diagrams you can hover to follow what depends on what. | "make an artifact explaining X", "put this in a page for the team" |
 | [sha3bolly](skills/sha3bolly/README.md) | Get explanations in plain words, with a real example and a flowchart. | "I don't understand", "explain again" |
 
 ## How they fit together

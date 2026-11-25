@@ -1,0 +1,47 @@
+<!--
+  outcome-grid · Compare / decision
+  Use when: two settings cross and each combination has one outcome (works / fails), so the reader can find the one bad cell and see why the fix avoids it.
+  Not for: more than ~3×3 cells or outcomes that are numbers on a scale (use a heatmap or a chart).
+  Fill: DATA.cols and DATA.rows ({label, sub?}), and DATA.cells[row][col] = {code, ok: true|false|'warn', lines: []}.
+-->
+<figure class="viz" id="og-1">
+  <style>
+    #og-1 .og { display: grid; gap: 14px 18px; align-items: center; min-width: 600px; font-family: var(--font-mono); padding: 6px 4px; }
+    #og-1 .og-ch { text-align: center; display: grid; gap: 2px; }
+    #og-1 .og-ch b, #og-1 .og-rh b { font-size: 15px; font-weight: 600; }
+    #og-1 .og-ch span, #og-1 .og-rh span { font-size: 12.5px; color: var(--muted); }
+    #og-1 .og-rh { display: grid; gap: 2px; padding-left: 8px; }
+    #og-1 .og-cell { border: 1.5px solid var(--t); background: var(--ts); border-radius: 12px; padding: 18px 14px; text-align: center; display: grid; gap: 4px; align-content: center; min-height: 112px; }
+    #og-1 .og-cell b { color: var(--t); font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    #og-1 .og-cell span { font-size: 13px; color: var(--muted); }
+  </style>
+  <div class="viz-title">{{The point of the grid, e.g. "Only the forced ranker on a full pack fails, and that is the default we ship"}}</div>
+  <div class="viz-body"><div class="og" role="table" aria-label="{{what the grid compares}}"></div></div>
+  <p class="viz-note">{{How to read it, e.g. "Rows and columns are the two settings; the red cell is the combination to steer out of."}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    cols: [{ label: 'ranker: "none"' }, { label: 'ranker: "rerank" (forced)' }],
+    rows: [{ label: 'pack off', sub: 'staging today' }, { label: 'pack on', sub: 'Deep agent default' }],
+    cells: [
+      [{ code: '200', ok: true, lines: ['finds 62 of 100', 'in 1.4 s'] }, { code: '200', ok: true, lines: ['finds 81 of 100', 'in 2.1 s'] }],
+      [{ code: '200', ok: true, lines: ['finds 74 of 100', 'every question today'] }, { code: '504', ok: false, lines: ['ranker times out after 40 s', 'when the pack has over 20 tables'] }]
+    ]
+  };
+  var fig = document.getElementById('og-1'), grid = fig.querySelector('.og');
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function head(h, cls, role) { return '<div class="' + cls + '" role="' + role + '"><b>' + esc(h.label) + '</b>' + (h.sub ? '<span>' + esc(h.sub) + '</span>' : '') + '</div>'; }
+  grid.style.gridTemplateColumns = 'minmax(150px, .7fr) repeat(' + DATA.cols.length + ', minmax(210px, 1fr))';
+  var html = '<div role="columnheader"></div>' + DATA.cols.map(function (c) { return head(c, 'og-ch', 'columnheader'); }).join('');
+  DATA.rows.forEach(function (r, ri) {
+    html += head(r, 'og-rh', 'rowheader');
+    DATA.cols.forEach(function (c, ci) {
+      var cell = DATA.cells[ri][ci], t = cell.ok === true ? 'good' : cell.ok === 'warn' ? 'warn' : 'bad', mark = cell.ok === true ? '✓' : cell.ok === 'warn' ? '!' : '✗';
+      html += '<div class="og-cell" role="cell" style="--t:var(--' + t + ');--ts:var(--' + t + '-soft)" data-tip="' + esc(r.label + ' × ' + c.label) + '"><b>' + esc(cell.code) + ' ' + mark + '</b>' +
+        cell.lines.map(function (l) { return '<span>' + esc(l) + '</span>'; }).join('') + '</div>';
+    });
+  });
+  grid.innerHTML = html;
+})();
+</script>

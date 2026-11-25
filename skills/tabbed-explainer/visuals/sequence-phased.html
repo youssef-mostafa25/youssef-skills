@@ -1,0 +1,135 @@
+<!--
+  sequence-phased · Sequence / who calls whom, in order, in phases
+  Use when: a request crosses several services in a long numbered order and you need to show where it goes, in which phase, and where the weight or the waste is.
+  Not for: a flow with no "who" (use pipeline). With few steps, use a single phase band.
+  Fill: DATA.actors (id, name, sub, color), DATA.phases (id, label) and DATA.steps in order: {phase, from, to, label, tip?, warn?, size?, later?, hi?}; leave out `to` for a step an actor does on its own.
+-->
+<figure class="viz" id="seqp-1" data-focus="direct">
+  <style>
+    :where(#seqp-1) .hd > .n-box { stroke: var(--k); stroke-width: 2; }
+    :where(#seqp-1) .e-line { stroke: var(--k); }
+    #seqp-1 .e-line.big { stroke-width: 4; }
+    #seqp-1 .e-line.later { stroke-dasharray: 1 6; stroke-linecap: round; }
+  </style>
+  <div class="viz-title">{{The point of the sequence, e.g. "The same rows cross the wire four times before the chart draws"}}</div>
+  <div class="viz-body"><svg role="img" aria-label="{{what the sequence shows}}"></svg></div>
+  <div class="focus-legend">
+    <span><i style="--k:var(--up)"></i>sends to it</span>
+    <span><i style="--k:var(--down)"></i>it sends to</span>
+    <span><i style="--k:var(--bad)"></i>heavy or wasted payload</span>
+    <span>dotted · later or optional</span>
+  </div>
+  <p class="viz-note">{{How to read it, e.g. "Read top to bottom. Arrow colour is the sender; hover an actor to keep only its messages, hover a number for the full step."}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    actors: [
+      { id: 'browser', name: 'Browser', sub: 'Next.js chat', color: 'var(--c1)' },
+      { id: 'api', name: 'Agent API', sub: 'FastAPI · agent/', color: 'var(--c4)' },
+      { id: 'deep', name: 'Deep agent', sub: 'LangGraph + subagents', color: 'var(--c3)' },
+      { id: 'runner', name: 'Runner', sub: 'Go · runner/', color: 'var(--c2)' },
+      { id: 'db', name: 'Database', sub: 'customer Postgres', color: 'var(--good)' },
+      { id: 'bucket', name: 'Payload bucket', sub: 'object storage', color: 'var(--c5)' }
+    ],
+    phases: [
+      { id: 'ask', label: '1 · Ask — the question arrives' },
+      { id: 'search', label: '2 · Search — finding the right tables' },
+      { id: 'run', label: '3 · Run — the runner reads the data' },
+      { id: 'shrink', label: '4 · Shrink — making it fit the model' },
+      { id: 'deliver', label: '5 · Deliver — getting it to the screen' }
+    ],
+    steps: [
+      { phase: 'ask', from: 'browser', to: 'api', label: 'POST chat message', hi: true, tip: 'The user asks "Which regions lost the most seats in Q3?"' },
+      { phase: 'ask', from: 'api', to: 'browser', label: '200 "searching"' },
+      { phase: 'ask', from: 'api', label: 'prepare the turn', tip: 'Loads history, user rights and the dataset list' },
+      { phase: 'ask', from: 'api', to: 'deep', label: 'run_context_search' },
+      { phase: 'search', from: 'deep', label: 'question → embedding' },
+      { phase: 'search', from: 'deep', to: 'runner', label: 'POST /search/candidates' },
+      { phase: 'search', from: 'runner', label: 'words + meaning + links', tip: 'Three searches run together; 40 candidates come back' },
+      { phase: 'search', from: 'runner', to: 'deep', label: '40 candidates · 1.2 s' },
+      { phase: 'search', from: 'deep', to: 'browser', label: 'WS "Ranking tables…"' },
+      { phase: 'run', from: 'deep', to: 'runner', label: 'POST /query/execute' },
+      { phase: 'run', from: 'runner', to: 'db', label: 'SELECT … (as written)' },
+      { phase: 'run', from: 'db', to: 'runner', label: 'rows… stop at the cap' },
+      { phase: 'run', from: 'runner', to: 'deep', label: '200 · one JSON body', warn: true, size: '~158 MB', tip: 'Every row in one response body, before any trimming' },
+      { phase: 'shrink', from: 'deep', label: 'read · parse · reshape' },
+      { phase: 'shrink', from: 'deep', to: 'runner', label: 'POST /query/profile', warn: true, size: 'all rows again', tip: 'Profiling sends the full result back to the Runner' },
+      { phase: 'shrink', from: 'deep', to: 'bucket', label: 'PUT results/{id}.json', warn: true, size: '~75 MB' },
+      { phase: 'shrink', from: 'deep', label: 'tool return → LLM' },
+      { phase: 'deliver', from: 'bucket', to: 'deep', label: 'GET result (re-read)', warn: true, size: '~75 MB' },
+      { phase: 'deliver', from: 'deep', to: 'browser', label: 'WS data · all rows', warn: true, size: '~75 MB' },
+      { phase: 'deliver', from: 'deep', to: 'browser', label: 'WS result card' },
+      { phase: 'deliver', from: 'browser', label: 'index rows by id', warn: true },
+      { phase: 'deliver', from: 'deep', to: 'browser', label: 'chart: render_asset', warn: true, later: true, size: 'all rows again', tip: 'Only when the answer has a chart: the rows are sent a second time' },
+      { phase: 'deliver', from: 'api', to: 'browser', label: 'WS final_response' }
+    ]
+  };
+  var fig = document.getElementById('seqp-1'), svg = fig.querySelector('svg'), NS = 'http://www.w3.org/2000/svg';
+  function mk(t, a, parent, text) { var el = document.createElementNS(NS, t); for (var k in a) el.setAttribute(k, a[k]); if (text != null) el.textContent = text; (parent || svg).appendChild(el); return el; }
+  var colW = 196, padL = 6, hW = 172, hH = 54, W = padL * 2 + DATA.actors.length * colW;
+  var act = {};
+  DATA.actors.forEach(function (a, i) { act[a.id] = { x: padL + i * colW + colW / 2, a: a }; });
+  // Layout: one row per step, phases stacked top to bottom.
+  var y = hH + 18, rows = [], bands = [], num = 0;
+  DATA.phases.forEach(function (ph, pi) {
+    var top = y; y += 30;
+    DATA.steps.forEach(function (s) {
+      if (s.phase !== ph.id) return;
+      var self = !s.to || s.to === s.from;
+      rows.push({ s: s, y: y, self: self, n: ++num });
+      y += self ? 50 : s.size ? 60 : 50;
+    });
+    y += 6; bands.push({ ph: ph, top: top, bottom: y, i: pi }); y += 4;
+  });
+  var H = y + 6;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.style.minWidth = '820px';
+  var gBand = mk('g', {}), gLife = mk('g', {}), gEdge = mk('g', {}), gHead = mk('g', {});
+  bands.forEach(function (b) {
+    if (b.i % 2 === 0) mk('rect', { x: 0, y: b.top, width: W, height: b.bottom - b.top, rx: 6, style: 'fill:var(--sunk)' }, gBand);
+    mk('text', { x: 12, y: b.top + 19, 'class': 'm', style: 'font-family:var(--font-mono);font-size:11px;letter-spacing:.1em' }, gBand, b.ph.label.toUpperCase());
+  });
+  rows.forEach(function (r) {
+    if (r.s.hi) mk('rect', { x: 3, y: r.y + 2, width: W - 6, height: 44, rx: 6, style: 'fill:color-mix(in srgb, var(--accent) 8%, transparent);stroke:var(--accent);stroke-width:1.5' }, gBand);
+  });
+  DATA.actors.forEach(function (a) {
+    var x = act[a.id].x;
+    var g = mk('g', { 'data-node': a.id, 'data-label': a.name }, gLife);
+    mk('rect', { x: x - 8, y: hH + 6, width: 16, height: H - hH - 6, style: 'fill:transparent' }, g);
+    mk('line', { x1: x, y1: hH + 6, x2: x, y2: H, style: 'stroke:var(--muted);stroke-opacity:.5;stroke-dasharray:3 5' }, g);
+    var h = mk('g', { 'data-node': a.id, 'data-label': a.name, 'class': 'hd', style: '--k:' + a.color }, gHead);
+    mk('rect', { x: x - hW / 2, y: 2, width: hW, height: hH - 4, rx: 9, 'class': 'n-box' }, h);
+    mk('text', { x: x, y: 24, 'text-anchor': 'middle', style: 'fill:var(--k);font-family:var(--font-display);font-weight:700;font-size:15px' }, h, a.name);
+    mk('text', { x: x, y: 41, 'text-anchor': 'middle', 'class': 'm' }, h, a.sub || '');
+  });
+  function chip(g, x, cy, text) {
+    var w = text.length * 6.5 + 12;
+    mk('rect', { x: x, y: cy - 7.5, width: w, height: 15, rx: 7.5, style: 'fill:var(--bad-soft)' }, g);
+    mk('text', { x: x + w / 2, y: cy + 3.5, 'text-anchor': 'middle', style: 'fill:var(--bad);font-family:var(--font-mono);font-size:10.5px' }, g, text);
+    return w;
+  }
+  function badge(g, x, cy, n) {
+    mk('circle', { cx: x, cy: cy, r: 10, style: 'fill:var(--k)' }, g);
+    mk('text', { x: x, y: cy + 3.5, 'text-anchor': 'middle', style: 'fill:var(--surface);font-size:10px;font-weight:700' }, g, String(n));
+  }
+  rows.forEach(function (r) {
+    var s = r.s, a = act[s.from].x, k = s.warn ? 'var(--bad)' : act[s.from].a.color;
+    var g = mk('g', { 'data-edge': s.from + '>' + (r.self ? s.from : s.to), 'data-tip': r.n + ' · ' + s.label + (s.tip ? '\n' + s.tip : '') + (s.size ? '\n' + s.size : ''), style: '--k:' + k }, gEdge);
+    if (r.self) {
+      var bw = 148, by = r.y + 10;
+      mk('rect', { x: a - bw / 2, y: by, width: bw, height: 32, rx: 7, style: 'fill:var(--surface);stroke:var(--k);stroke-width:1.5' }, g);
+      mk('text', { x: a, y: by + 20, 'text-anchor': 'middle', style: 'font-size:12.5px' }, g, s.label);
+      badge(g, a - bw / 2, by, r.n);
+      if (s.size) chip(g, a + bw / 2 + 8, by + 16, s.size);
+      return;
+    }
+    var b = act[s.to].x, dir = b > a ? 1 : -1, ly = r.y + 30, hd = s.warn ? 10 : 7, tip = b - dir * 3, base = tip - dir * hd * 1.4;
+    mk('path', { d: 'M' + a + ',' + ly + ' H' + tip, style: 'stroke:transparent;stroke-width:14;fill:none' }, g);
+    mk('path', { d: 'M' + (a + dir * 10) + ',' + ly + ' H' + (base + dir), 'class': 'e-line' + (s.warn ? ' big' : '') + (s.later ? ' later' : '') }, g);
+    mk('path', { d: 'M' + tip + ',' + ly + ' L' + base + ',' + (ly - hd * 0.75) + ' L' + base + ',' + (ly + hd * 0.75) + ' Z', style: 'fill:var(--k)' }, g);
+    mk('text', { x: (a + b) / 2, y: ly - 9, 'text-anchor': 'middle', style: 'font-size:12.5px' }, g, s.label);
+    badge(g, a, ly, r.n);
+    if (s.size) { var w = s.size.length * 6.5 + 12; chip(g, dir > 0 ? b - 16 - w : b + 16, ly + 15, s.size); }
+  });
+})();
+</script>

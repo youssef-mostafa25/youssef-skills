@@ -1,0 +1,112 @@
+<!--
+  many-to-one · How parts connect
+  Use when: callers each wire straight to several backends today, and the plan puts one interface (a seam) between them; shows today and target as two halves.
+  Not for: a single chain of steps (use pipeline) or a whole system with no shared middle (use blueprint).
+  Fill: DATA.today (callers, providers, edges) and DATA.target (callers, seam, providers, labels); mark a provider missing:true (dashed) or isNew:true (accent).
+-->
+<figure class="viz" id="mto-1" data-focus>
+  <style>
+    :where(#mto-1) .n-box.is-seam { stroke: var(--accent); }
+    :where(#mto-1) .n-box.is-new { stroke: var(--accent); fill: var(--accent-soft); }
+    #mto-1 .e-line.is-new { stroke: var(--accent); }
+  </style>
+  <div class="viz-title">{{The point, e.g. "One Ranker seam turns six direct wires into one interface"}}</div>
+  <div class="viz-body"><svg role="img" aria-label="{{what the diagram shows}}"></svg></div>
+  <div class="viz-key"><span><i style="--k:var(--muted)"></i>solid arrow: calls it</span><span>dashed: implements the seam, or not wired yet</span><span><i style="--k:var(--accent)"></i>new in the target</span></div>
+  <p class="viz-note">{{How to read it, e.g. "Hover a caller or ranker to see the path it takes"}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    today: {
+      title: 'Today — 6 direct edges, no seam',
+      callers: [
+        { id: 't-find', label: 'find_tables' },
+        { id: 't-cols', label: 'search_columns' },
+        { id: 't-sugg', label: 'suggest_datasets' },
+        { id: 't-ent', label: 'entity lookup' }
+      ],
+      providers: [
+        { id: 'p-cards', label: 'table cards (Payload bucket)' },
+        { id: 'p-kw', label: 'keyword index (Database)' },
+        { id: 'p-graph', label: 'link graph (Database)' },
+        { id: 'p-vec', label: 'vector store — not wired', missing: true }
+      ],
+      edges: [['t-find', 'p-cards'], ['t-cols', 'p-kw'], ['t-sugg', 'p-kw'], ['t-sugg', 'p-graph'], ['t-ent', 'p-kw'], ['t-ent', 'p-graph']]
+    },
+    target: {
+      title: 'Target — 4 callers + 4 rankers, one seam',
+      seam: { id: 'seam', label: 'Ranker', sub: 'interface · rank(query)' },
+      inLabel: 'SearchQuery', outLabel: 'implements',
+      callers: [
+        { id: 'c-chat', label: 'chat agent' },
+        { id: 'c-deep', label: 'Deep agent' },
+        { id: 'c-run', label: 'Runner jobs' },
+        { id: 'c-box', label: 'Browser search box' }
+      ],
+      providers: [
+        { id: 'r-card', label: 'CardRanker' },
+        { id: 'r-kw', label: 'KeywordRanker' },
+        { id: 'r-graph', label: 'GraphRanker' },
+        { id: 'r-vec', label: 'VectorRanker', isNew: true }
+      ],
+      newNote: 'slots in — no caller changes'
+    }
+  };
+  var fig = document.getElementById('mto-1'), svg = fig.querySelector('svg'), NS = 'http://www.w3.org/2000/svg';
+  function mk(t, a, p, txt) { var el = document.createElementNS(NS, t); for (var k in a) el.setAttribute(k, a[k]); if (txt != null) el.textContent = txt; (p || svg).appendChild(el); return el; }
+  var W = 960, cW = 270, pW = 300, pX = W - pW, bH = 40, gap = 54, sW = 220, sH = 72, sX = 375;
+  mk('defs', {}).innerHTML =
+    '<marker id="mto-1-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" style="fill:var(--muted)"/></marker>' +
+    '<marker id="mto-1-arrow-new" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" style="fill:var(--accent)"/></marker>';
+  var gE = mk('g', {}), gN = mk('g', {}), at = {};
+  var HEAD = 'font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:.12em;';
+  function box(n, x, y, w, h) {
+    var g = mk('g', { transform: 'translate(' + x + ',' + y + ')', 'data-node': n.id, 'data-label': n.label }, gN);
+    var r = mk('rect', { width: w, height: h, rx: 4, 'class': 'n-box' + (n.isNew ? ' is-new' : '') + (n.seam ? ' is-seam' : '') }, g);
+    if (n.missing) r.setAttribute('stroke-dasharray', '5 4');
+    if (n.seam) {
+      mk('text', { x: w / 2, y: h / 2 - 3, 'text-anchor': 'middle', style: 'font-family:var(--font-display);font-weight:700;font-size:16px;fill:var(--accent)' }, g, n.label);
+      mk('text', { x: w / 2, y: h / 2 + 16, 'text-anchor': 'middle', 'class': 'm', style: 'font-family:var(--font-mono)' }, g, n.sub);
+    } else {
+      mk('text', { x: 14, y: h / 2 + 4, 'class': n.missing ? 'm' : '', style: 'font-family:var(--font-mono);font-size:12.5px' + (n.isNew ? ';fill:var(--accent);font-weight:600' : '') }, g, n.label);
+    }
+    at[n.id] = { x: x, y: y, w: w, h: h };
+  }
+  function edge(from, to, x1, y1, x2, y2, opts) {
+    var l = mk('line', { x1: x1, y1: y1, x2: x2, y2: y2, 'class': 'e-line' + (opts.isNew ? ' is-new' : ''), 'data-edge': from + '>' + to,
+      'marker-end': 'url(#mto-1-arrow' + (opts.isNew ? '-new' : '') + ')' }, gE);
+    if (opts.dash) l.setAttribute('stroke-dasharray', '5 4');
+  }
+  // Today: callers left, providers right, every wire drawn straight.
+  var T = DATA.today, rowsT = Math.max(T.callers.length, T.providers.length), y0 = 34;
+  mk('text', { x: 0, y: 14, style: HEAD + 'fill:var(--muted)' }, null, T.title.toUpperCase());
+  T.callers.forEach(function (n, i) { box(n, 0, y0 + i * gap, cW, bH); });
+  T.providers.forEach(function (n, i) { box(n, pX, y0 + i * gap, pW, bH); });
+  var inCount = {}, inSeen = {};
+  T.edges.forEach(function (e) { inCount[e[1]] = (inCount[e[1]] || 0) + 1; });
+  // Target, part 1: the seam goes in the DOM before its callers so it reads as the centre.
+  var G = DATA.target, sepY = y0 + rowsT * gap + 6, ty = sepY + 64, rowsG = Math.max(G.callers.length, G.providers.length);
+  var span = rowsG * gap - (gap - bH), sY = ty + span / 2 - sH / 2;
+  box({ id: G.seam.id, label: G.seam.label, sub: G.seam.sub, seam: true }, sX, sY, sW, sH);
+  T.edges.forEach(function (e) {
+    var a = at[e[0]], b = at[e[1]], k = inSeen[e[1]] = (inSeen[e[1]] || 0) + 1;
+    edge(e[0], e[1], a.x + a.w, a.y + bH / 2, b.x - 2, b.y + bH / 2 + (k - 1 - (inCount[e[1]] - 1) / 2) * 7, {});
+  });
+  mk('line', { x1: 0, y1: sepY, x2: W, y2: sepY, style: 'stroke:var(--line)' });
+  mk('text', { x: 0, y: sepY + 34, style: HEAD + 'fill:var(--accent)' }, null, G.title.toUpperCase());
+  // Target, part 2: callers → seam → providers.
+  G.callers.forEach(function (n, i) { box(n, 0, ty + i * gap, cW, bH); });
+  G.providers.forEach(function (n, i) { box(n, pX, ty + i * gap, pW, bH); });
+  var nc = G.callers.length, np = G.providers.length, mid = sY + sH / 2;
+  G.callers.forEach(function (n, i) { var a = at[n.id]; edge(n.id, G.seam.id, a.x + cW, a.y + bH / 2, sX - 2, mid + (i - (nc - 1) / 2) * 11, {}); });
+  G.providers.forEach(function (n, i) { var b = at[n.id]; edge(G.seam.id, n.id, sX + sW, mid + (i - (np - 1) / 2) * 11, b.x - 2, b.y + bH / 2, { dash: !n.isNew, isNew: n.isNew }); });
+  mk('text', { x: (cW + sX) / 2, y: ty - 12, 'text-anchor': 'middle', 'class': 'm', style: 'font-family:var(--font-mono)' }, null, G.inLabel);
+  mk('text', { x: (sX + sW + pX) / 2, y: ty - 12, 'text-anchor': 'middle', 'class': 'm', style: 'font-family:var(--font-mono)' }, null, G.outLabel);
+  G.providers.forEach(function (n) {
+    if (n.isNew && G.newNote) mk('text', { x: (sX + sW + pX) / 2 + 10, y: at[n.id].y + bH + 18, 'text-anchor': 'middle', style: 'fill:var(--accent);font-size:12px' }, null, G.newNote);
+  });
+  var H = ty + span + 30;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.style.minWidth = '680px';
+})();
+</script>

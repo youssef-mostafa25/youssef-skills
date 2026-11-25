@@ -1,0 +1,94 @@
+<!--
+  dependency-graph · How parts connect / what must ship first.
+  Columns are computed: an item sits one column right of its deepest prerequisite, so column 1
+  can start now and each column can run in parallel once the ones left of it are done.
+  Fill DATA only: nodes {id, label, group?, flows?: "a b"} and edges [from, to] (from comes first, to needs it).
+  Optional FLOWS adds the flow buttons; GROUP_COLORS colours the stripe on each node and GROUP_NAMES names it in the key.
+  Give each instance its own id (dep-1, dep-2 …) on the figure and in the script.
+-->
+<figure class="viz" id="dep-1" data-focus>
+  <div class="viz-title">{{The point of the graph, e.g. "The tenant registry unblocks everything else"}}</div>
+  <div class="focus-bar">
+    <span class="lbl">Flow</span>
+    <button type="button" data-flow-btn="all" aria-pressed="true">All</button>
+    <!-- one button per FLOWS entry, filled by the script -->
+    <input type="search" data-focus-find placeholder="Find an item" aria-label="Find an item">
+  </div>
+  <div class="dep-wrap" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,280px);gap:14px">
+    <div class="viz-body"><svg role="img" aria-label="{{what the graph shows}}"></svg></div>
+    <div class="focus-panel" data-focus-panel><span class="viz-note">Hover an item to see what it needs (blue) and what needs it (red). Click to pin it and list its links.</span></div>
+  </div>
+  <div class="focus-legend"><span><i style="--k:var(--up)"></i>needs first</span><span><i style="--k:var(--down)"></i>needed by</span><span>Columns: each can run in parallel once the ones to its left are done</span></div>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    nodes: [
+      { id: 'T1', label: 'Tenant registry', group: 'db', flows: 'data' },
+      { id: 'T2', label: 'Per-tenant DB pools', group: 'db', flows: 'data' },
+      { id: 'T3', label: 'Tenant on request context', group: 'api', flows: 'request' },
+      { id: 'T4', label: 'Row-level security', group: 'db', flows: 'data request' },
+      { id: 'T5', label: 'Runner tenant routing', group: 'api', flows: 'request' },
+      { id: 'T6', label: 'Per-tenant storage', group: 'ops', flows: 'data' },
+      { id: 'T7', label: 'Tenant admin screens', group: 'api', flows: 'request' },
+      { id: 'T8', label: 'Migration + cutover', group: 'ops', flows: 'data request' }
+    ],
+    edges: [['T1', 'T2'], ['T1', 'T3'], ['T2', 'T4'], ['T3', 'T4'], ['T3', 'T5'], ['T1', 'T6'], ['T4', 'T7'], ['T5', 'T8'], ['T6', 'T8'], ['T7', 'T8']],
+    FLOWS: [['data', 'Data path'], ['request', 'Request path']],
+    GROUP_COLORS: { db: 'var(--c1)', api: 'var(--c3)', ops: 'var(--c2)' },
+    GROUP_NAMES: { db: 'Database', api: 'API', ops: 'Ops' },
+    COLUMN_NAMES: ['Start now', 'Then', 'Then', 'Last']
+  };
+  var fig = document.getElementById('dep-1'), svg = fig.querySelector('svg'), NS = 'http://www.w3.org/2000/svg';
+  var nW = 168, nH = 40, colW = 220, rowH = 56, padTop = 34, padL = 8;
+  var byId = {}; DATA.nodes.forEach(function (n) { byId[n.id] = n; n.pre = []; n.suc = []; });
+  DATA.edges.forEach(function (e) { byId[e[1]].pre.push(e[0]); byId[e[0]].suc.push(e[1]); });
+  // Column = longest path from a root.
+  var depth = {};
+  function d(id) { if (depth[id] != null) return depth[id]; depth[id] = 0; var m = 0; byId[id].pre.forEach(function (p) { m = Math.max(m, d(p) + 1); }); return (depth[id] = m); }
+  DATA.nodes.forEach(function (n) { d(n.id); });
+  var cols = []; DATA.nodes.forEach(function (n) { (cols[depth[n.id]] = cols[depth[n.id]] || []).push(n); });
+  // A few barycentre sweeps to cut crossings.
+  var pos = {}; function place() { cols.forEach(function (c) { c.forEach(function (n, i) { pos[n.id] = i; }); }); } place();
+  for (var it = 0; it < 6; it++) {
+    for (var w = 1; w < cols.length; w++) { cols[w].forEach(function (n) { n.b = n.pre.length ? n.pre.reduce(function (s, x) { return s + pos[x]; }, 0) / n.pre.length : pos[n.id]; }); cols[w].sort(function (a, b) { return a.b - b.b; }); place(); }
+    for (w = cols.length - 2; w >= 0; w--) { cols[w].forEach(function (n) { n.b = n.suc.length ? n.suc.reduce(function (s, x) { return s + pos[x]; }, 0) / n.suc.length : pos[n.id]; }); cols[w].sort(function (a, b) { return a.b - b.b; }); place(); }
+  }
+  var maxRows = Math.max.apply(null, cols.map(function (c) { return c.length; }));
+  var W = padL * 2 + cols.length * colW - (colW - nW), H = padTop + maxRows * rowH;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.style.minWidth = Math.min(W, 640) + 'px';
+  function mk(t, a, parent, text) { var el = document.createElementNS(NS, t); for (var k in a) el.setAttribute(k, a[k]); if (text != null) el.textContent = text; (parent || svg).appendChild(el); return el; }
+  var xy = {};
+  cols.forEach(function (c, w) {
+    var off = (maxRows - c.length) * rowH / 2;
+    c.forEach(function (n, i) { xy[n.id] = { x: padL + w * colW, y: padTop + off + i * rowH }; });
+    mk('text', { x: padL + w * colW, y: 16, 'class': 'm', style: 'font-weight:600;letter-spacing:.06em' }, null, ((DATA.COLUMN_NAMES && DATA.COLUMN_NAMES[w]) || 'Step ' + (w + 1)).toUpperCase());
+  });
+  var gE = mk('g', {}), gN = mk('g', {});
+  mk('defs', {}).innerHTML = '<marker id="dep-1-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" style="fill:var(--muted)"/></marker>';
+  DATA.edges.forEach(function (e) {
+    var a = xy[e[0]], b = xy[e[1]], x1 = a.x + nW, y1 = a.y + nH / 2, x2 = b.x - 2, y2 = b.y + nH / 2, dx = (x2 - x1) / 2;
+    var p = mk('path', { d: 'M' + x1 + ',' + y1 + ' C' + (x1 + dx) + ',' + y1 + ' ' + (x2 - dx) + ',' + y2 + ' ' + x2 + ',' + y2,
+      'data-edge': e[0] + '>' + e[1], 'data-flows': (byId[e[0]].flows || '') + ' ' + (byId[e[1]].flows || ''),
+      'marker-end': 'url(#dep-1-arrow)', 'class': 'e-line' }, gE);
+    p.setAttribute('data-tip', e[1] + ' needs ' + e[0]);
+  });
+  DATA.nodes.forEach(function (n) {
+    var g = mk('g', { transform: 'translate(' + xy[n.id].x + ',' + xy[n.id].y + ')', 'data-node': n.id, 'data-label': n.id + ' · ' + n.label, 'data-flows': n.flows || '' }, gN);
+    mk('rect', { width: nW, height: nH, rx: 7, 'class': 'n-box' }, g);
+    mk('rect', { width: 5, height: nH, rx: 2, style: 'fill:' + ((DATA.GROUP_COLORS || {})[n.group] || 'var(--c6)') }, g);
+    mk('text', { x: 13, y: 16, style: 'font-weight:700;font-family:var(--font-mono)' }, g, n.id);
+    mk('text', { x: 13, y: 31, 'class': 'm' }, g, n.label.length > 26 ? n.label.slice(0, 25) + '…' : n.label);
+  });
+  var bar = fig.querySelector('.focus-bar'), find = bar.querySelector('[data-focus-find]');
+  (DATA.FLOWS || []).forEach(function (f) { var b = document.createElement('button'); b.type = 'button'; b.setAttribute('data-flow-btn', f[0]); b.setAttribute('aria-pressed', 'false'); b.textContent = f[1]; bar.insertBefore(b, find); });
+  if (!(DATA.FLOWS || []).length) Array.prototype.slice.call(bar.querySelectorAll('.lbl, [data-flow-btn]')).forEach(function (x) { x.remove(); });
+  // Key for the stripe colours, so the groups are named on the page.
+  var legend = fig.querySelector('.focus-legend');
+  Object.keys(DATA.GROUP_COLORS || {}).reverse().forEach(function (g) {
+    var k = document.createElement('span'); k.innerHTML = '<i style="--k:' + DATA.GROUP_COLORS[g] + ';border-top-width:6px"></i>';
+    k.appendChild(document.createTextNode((DATA.GROUP_NAMES || {})[g] || g)); legend.insertBefore(k, legend.firstChild);
+  });
+  if (window.matchMedia('(max-width: 760px)').matches) fig.querySelector('.dep-wrap').style.gridTemplateColumns = 'minmax(0,1fr)';
+})();
+</script>

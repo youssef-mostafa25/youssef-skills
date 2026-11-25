@@ -1,0 +1,87 @@
+<!--
+  tree · Hierarchy
+  Use when: one root splits into kinds, then groups, then items, and the reader needs to see where each item lives and how deep.
+  Not for: items with more than one parent or links across branches (use data-model or dependency-graph).
+  Fill: DATA.root as nested {label, children?, color? (first level only), note?, badge?}; DATA.levels names each depth for the right-hand labels. Nodes without children draw as rounded leaves.
+-->
+<figure class="viz" id="tree-1" data-focus>
+  <style>
+    :where(#tree-1) .n-box.is-root { stroke: var(--accent); }
+    :where(#tree-1) .n-box.is-kind { fill: color-mix(in srgb, var(--k) 15%, var(--surface)); stroke: var(--k); }
+    :where(#tree-1) .n-box.is-leaf { fill: color-mix(in srgb, var(--k) 8%, var(--surface)); stroke: color-mix(in srgb, var(--k) 70%, var(--line)); }
+  </style>
+  <div class="viz-title">{{The point, e.g. "A search walks down one branch: kind, then source, then table"}}</div>
+  <div class="viz-body"><svg role="img" aria-label="{{what the tree holds}}"></svg></div>
+  <div class="viz-key"></div>
+  <p class="viz-note">{{How to read it, e.g. "Rounded ends are leaves (the items); hover any box to see its path from the root"}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    levels: ['root', 'kind', 'source', 'table · group', 'item'],
+    root: { label: 'root', children: [
+      { label: 'Schema', color: 'var(--c1)', children: [
+        { label: 'source: sales_dw', note: '+ one branch per source', children: [
+          { label: 'orders', children: [{ label: 'id · total · region · +9' }] },
+          { label: 'customers' }
+        ] },
+        { label: 'source: support_db', children: [
+          { label: 'tickets', children: [{ label: 'subject · status · +4' }] }
+        ] }
+      ] },
+      { label: 'Context', color: 'var(--c2)', children: [
+        { label: 'source: sales_dw', children: [
+          { label: 'entities · region.name', badge: '32 names > 20 → split', children: [
+            { label: 'group A · 16', children: [{ label: 'EMEA North · …' }] },
+            { label: 'group B · 16' }
+          ] },
+          { label: 'rules · metrics' }
+        ] }
+      ] },
+      { label: 'Components', color: 'var(--c3)', children: [
+        { label: 'workspace: Sales demo', children: [
+          { label: 'dashboards', children: [{ label: 'Revenue by region' }] },
+          { label: 'decks' }
+        ] }
+      ] }
+    ] }
+  };
+  var fig = document.getElementById('tree-1'), svg = fig.querySelector('svg'), NS = 'http://www.w3.org/2000/svg';
+  function mk(t, a, p, txt) { var el = document.createElementNS(NS, t); for (var k in a) el.setAttribute(k, a[k]); if (txt != null) el.textContent = txt; (p || svg).appendChild(el); return el; }
+  var nH = 32, levGap = 84, sib = 14, CHW = 7.3, rightCol = 110, count = 0, all = [], depthMax = 0;
+  // Pass 1: ids, colours, widths, and how wide each subtree needs to be.
+  function measure(n, depth, color) {
+    n.id = n.id || 'tr' + (count++); n.depth = depth; n.color = depth === 1 ? (n.color || 'var(--c' + (count % 6 + 1) + ')') : color;
+    n.kids = n.children || []; n.w = Math.max(80, n.label.length * CHW + 30); depthMax = Math.max(depthMax, depth); all.push(n);
+    var sum = 0; n.kids.forEach(function (c, i) { measure(c, depth + 1, n.color); sum += c.span + (i ? sib : 0); });
+    n.kidsW = sum; n.span = Math.max(n.w, sum);
+  }
+  // Pass 2: centre each parent over its children.
+  function place(n, left) {
+    n.cx = left + n.span / 2; n.y = 4 + n.depth * levGap;
+    var x = n.cx - n.kidsW / 2; n.kids.forEach(function (c) { place(c, x); x += c.span + sib; });
+  }
+  measure(DATA.root, 0, 'var(--muted)'); place(DATA.root, 4);
+  var W = DATA.root.span + 8 + rightCol, H = 4 + depthMax * levGap + nH + 8;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.style.minWidth = Math.min(W, 900) + 'px';
+  (DATA.levels || []).forEach(function (l, i) { if (i <= depthMax) mk('text', { x: W - 4, y: 4 + i * levGap + nH / 2 + 4, 'text-anchor': 'end', 'class': 'm' }, null, l); });
+  var gE = mk('g', {}), gN = mk('g', {}), gB = mk('g', {});
+  all.forEach(function (n) {
+    n.kids.forEach(function (c) {
+      mk('path', { d: 'M' + n.cx + ',' + (n.y + nH) + ' L' + c.cx + ',' + c.y, 'class': 'e-line', 'data-edge': n.id + '>' + c.id }, gE);
+    });
+    var leaf = !n.kids.length && n.depth > 1, kind = n.depth === 1;
+    var g = mk('g', { transform: 'translate(' + (n.cx - n.w / 2) + ',' + n.y + ')', 'data-node': n.id, 'data-label': n.label }, gN);
+    mk('rect', { width: n.w, height: nH, rx: leaf ? nH / 2 : 7, 'class': 'n-box' + (n.depth === 0 ? ' is-root' : kind ? ' is-kind' : leaf ? ' is-leaf' : ''), style: '--k:' + n.color }, g);
+    mk('text', { x: n.w / 2, y: nH / 2 + 4.5, 'text-anchor': 'middle', style: kind || n.depth === 0 ? 'font-family:var(--font-display);font-weight:700;font-size:14px' : 'font-family:var(--font-mono);font-size:12px' }, g, n.label);
+    if (n.note) mk('text', { x: n.cx - n.w / 2, y: n.y + nH + 18, 'class': 'm' }, gB, n.note);
+    if (n.badge) {
+      var bw = n.badge.length * 6.6 + 22, by = n.y + nH + (levGap - nH) / 2 - 10;
+      mk('rect', { x: n.cx - bw / 2, y: by, width: bw, height: 20, rx: 10, style: 'fill:var(--warn-soft);stroke:var(--warn)' }, gB);
+      mk('text', { x: n.cx, y: by + 14, 'text-anchor': 'middle', style: 'fill:var(--warn);font-weight:600;font-size:11.5px' }, gB, n.badge);
+    }
+  });
+  fig.querySelector('.viz-key').innerHTML = DATA.root.kids.map(function (k) { return '<span><i style="--k:' + k.color + '"></i>' + k.label + '</span>'; }).join('') +
+    '<span><i style="--k:transparent;border:1.5px solid var(--muted);border-radius:6px;width:18px"></i>rounded ends = leaves</span>';
+})();
+</script>

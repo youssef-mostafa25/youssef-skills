@@ -1,0 +1,46 @@
+<!--
+  code-panel · Code change
+  Use when: a few lines of code carry the point (what is wrapped inside what, which line changed) and the reader needs the block that matters boxed and labelled.
+  Not for: long diffs (link the PR) or code whose point is a flow between services (use a sequence).
+  Fill: plain markup. Each .cp-box is one level (cp-1 tinted, cp-2 accent); each .cp-line holds one line of escaped code (&lt; &gt; &amp;) and an optional .cp-ptr side label; .cp-side is a label on the box head; .cp-note a muted line inside a box.
+-->
+<figure class="viz" id="code-1">
+  <style>
+    #code-1 .cp { width: max-content; min-width: 100%; }
+    #code-1 .cp-box { border: 2px solid var(--ink); border-radius: 12px; padding: 16px 22px; display: grid; gap: 4px; }
+    #code-1 .cp-box .cp-box { margin: 10px 0; border-width: 1.5px; }
+    #code-1 .cp-1 { border-color: color-mix(in srgb, var(--c3) 55%, var(--line)); background: color-mix(in srgb, var(--c3) 9%, var(--surface)); }
+    #code-1 .cp-2 { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+    #code-1 .cp-head { display: flex; justify-content: space-between; gap: 32px; align-items: baseline; }
+    #code-1 .cp-head b { font-family: var(--font-display); font-size: 16px; font-weight: 600; }
+    #code-1 .cp-2 > .cp-head b { color: var(--accent); }
+    #code-1 .cp-side { font-size: 13px; color: var(--muted); }
+    #code-1 .cp-line { display: flex; gap: 24px; align-items: baseline; }
+    #code-1 .cp-line code { font-size: 14px; white-space: pre; line-height: 1.7; }
+    #code-1 .cp-ptr { font-size: 12.5px; color: var(--accent); white-space: nowrap; }
+    #code-1 .cp-ptr::before { content: "← "; }
+    #code-1 .cp-note { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  </style>
+  <div class="viz-title">{{The point of the code, e.g. "The ranker's LIMIT 20 stays inside, so a top 20 is still a top 20 once wrapped"}}</div>
+  <div class="viz-body">
+    <div class="cp">
+      <div class="cp-box">
+        <div class="cp-head"><b>Agent's query, written against the pack</b><span class="cp-side">emitted alias: pack, or pack_1 if taken</span></div>
+        <div class="cp-line"><code>SELECT table_name, score FROM (</code></div>
+        <div class="cp-box cp-1">
+          <div class="cp-head"><b>Candidate search · built from the question, untouched</b></div>
+          <div class="cp-line"><code>SELECT table_name, SUM(hits) AS score FROM (</code></div>
+          <div class="cp-box cp-2">
+            <div class="cp-head"><b>Ranker's top 20 · ORDER BY and LIMIT kept</b></div>
+            <div class="cp-line"><code>SELECT table_name, column_name, COUNT(*) AS hits</code></div>
+            <div class="cp-line"><code>FROM matches GROUP BY 1, 2 ORDER BY hits DESC LIMIT 20</code><span class="cp-ptr">stays inside</span></div>
+          </div>
+          <div class="cp-line"><code>) AS pack WHERE dataset = 'sales' GROUP BY table_name</code></div>
+          <p class="cp-note">this pack is visible only inside these parentheses, so it never collides with the outer one</p>
+        </div>
+        <div class="cp-line"><code>) AS pack WHERE score &gt; 3</code><span class="cp-ptr">the agent's only edit</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="viz-note">{{How to read it, e.g. "Each box is one level of nesting; only the outer box is new."}}</p>
+</figure>

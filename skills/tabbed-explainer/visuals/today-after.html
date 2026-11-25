@@ -1,0 +1,105 @@
+<!--
+  today-after · Before → after / steps
+  Use when: a change replaces or collapses steps in a flow and the reader must see both versions on one grid, with what goes wrong today and the new gate that stops it.
+  Not for: one flow with no change (use pipeline) or a before/after of numbers (use a chart).
+  Fill: DATA.rows (keep ids unique across rows, e.g. t-… and a-…): {label, sub, boxes: [{id, text, sub?, mono?, gate?, col?, span?}], edges?, notes?}.
+  Boxes chain left to right unless edges is given as [{from, to, label?, tone?: 'good'|'bad', back?: true}]; notes: [{under: boxId, tone: 'bad'|'muted', title?, lines: []}]. col/span place a box on the shared grid (default: its index, 1).
+-->
+<figure class="viz" id="ta-1" data-focus>
+  <style>
+    :where(#ta-1) .gate > .n-box { fill: var(--good-soft); stroke: var(--good); stroke-width: 2; }
+    :where(#ta-1) .e-line.good { stroke: var(--good); }
+    :where(#ta-1) .e-line.bad { stroke: var(--bad); }
+  </style>
+  <div class="viz-title">{{The point of the change, e.g. "Five guessing calls become one search that refuses to guess"}}</div>
+  <div class="viz-body"><svg role="img" aria-label="{{what today and after show}}"></svg></div>
+  <div class="focus-legend"><span><i style="--k:var(--up)"></i>comes before</span><span><i style="--k:var(--down)"></i>comes after</span><span><i style="--k:var(--good)"></i>the new gate</span><span><i style="--k:var(--bad)"></i>what goes wrong today</span></div>
+  <p class="viz-note">{{How to read it, e.g. "Same grid, top is today, bottom is after the change; red is what happens silently today."}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    rows: [
+      { label: 'TODAY', sub: '5 tool calls per question, each a separate round trip', boxes: [
+          { id: 't-list', text: 'list_datasets', mono: true },
+          { id: 't-search', text: 'search_tables', mono: true },
+          { id: 't-schema', text: 'read_schema', mono: true },
+          { id: 't-guess', text: 'guess_columns', mono: true },
+          { id: 't-run', text: 'run_query', mono: true },
+          { id: 't-runner', text: 'Runner' }
+        ],
+        notes: [
+          { under: 't-run', tone: 'bad', title: 'silent retries', lines: ['the agent guesses a missing column,', 'the Runner rewrites the SELECT'] },
+          { under: 't-runner', tone: 'muted', lines: ['scans every row,', 'returns ~75 MB'] }
+        ] },
+      { label: 'AFTER', sub: '1 tool call; the context search is the gate', boxes: [
+          { id: 'a-agent', text: 'Deep agent asks\nthe question', span: 1.4 },
+          { id: 'a-gate', text: 'context_search(question)', mono: true, sub: 'search → rank → pack', gate: true, col: 1.8, span: 2.3 },
+          { id: 'a-runner', text: 'Runner', col: 5 }
+        ],
+        edges: [
+          { from: 'a-agent', to: 'a-gate' },
+          { from: 'a-gate', to: 'a-runner', label: '20 ranked items + rules', tone: 'good' },
+          { from: 'a-gate', to: 'a-agent', label: 'no match: says so, with the closest 3', tone: 'bad', back: true }
+        ] }
+    ]
+  };
+  var fig = document.getElementById('ta-1'), svg = fig.querySelector('svg'), NS = 'http://www.w3.org/2000/svg';
+  function mk(t, a, parent, text) { var el = document.createElementNS(NS, t); for (var k in a) el.setAttribute(k, a[k]); if (text != null) el.textContent = text; (parent || svg).appendChild(el); return el; }
+  var W = 1200, labelW = 170, gap = 24, lineH = 17, y = 0;
+  var N = Math.max.apply(null, DATA.rows.map(function (r) { return r.boxes.length; }));
+  var cw = (W - labelW - (N - 1) * gap) / N;
+  var defs = mk('defs', {});
+  defs.innerHTML = [['', 'var(--ink)'], ['-good', 'var(--good)'], ['-bad', 'var(--bad)']].map(function (m) {
+    return '<marker id="ta-1-arrow' + m[0] + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:' + m[1] + '"/></marker>';
+  }).join('');
+  var gD = mk('g', {}), gE = mk('g', {}), gN = mk('g', {});
+  DATA.rows.forEach(function (row, ri) {
+    if (ri > 0) { mk('line', { x1: 0, x2: W, y1: y + 6, y2: y + 6, style: 'stroke:var(--line)' }, gD); y += 30; }
+    mk('text', { x: 0, y: y + 16, style: 'font-family:var(--font-display);font-weight:700;font-size:17px' }, gD, row.label);
+    mk('text', { x: labelW, y: y + 16, 'class': 'm', style: 'font-size:14px' }, gD, row.sub || '');
+    y += 40;
+    var at = {}, bh = Math.max.apply(null, row.boxes.map(function (b) { return Math.max(48, (b.text.split('\n').length + (b.sub ? 1 : 0)) * lineH + 22); }));
+    row.boxes.forEach(function (b, i) {
+      var col = b.col != null ? b.col : i, span = b.span || 1;
+      var x = labelW + col * (cw + gap), w = span * cw + (span - 1) * gap;
+      at[b.id] = { x: x, w: w, cx: x + w / 2 };
+      var g = mk('g', { 'data-node': b.id, 'data-label': row.label + ' · ' + b.text.replace(/\n/g, ' '), 'class': b.gate ? 'gate' : '' }, gN);
+      mk('rect', { x: x, y: y, width: w, height: bh, rx: 7, 'class': 'n-box' }, g);
+      var lines = b.text.split('\n'), total = (lines.length + (b.sub ? 1 : 0)) * lineH, ty = y + (bh - total) / 2 + 13;
+      lines.forEach(function (l, j) { mk('text', { x: x + w / 2, y: ty + j * lineH, 'text-anchor': 'middle', style: 'font-size:13.5px' + (b.mono ? ';font-family:var(--font-mono);font-size:12.5px' : '') }, g, l); });
+      if (b.sub) mk('text', { x: x + w / 2, y: ty + lines.length * lineH + 2, 'text-anchor': 'middle', style: 'font-size:12.5px;fill:' + (b.gate ? 'var(--good)' : 'var(--muted)') }, g, b.sub);
+    });
+    var edges = row.edges || row.boxes.slice(1).map(function (b, i) { return { from: row.boxes[i].id, to: b.id }; });
+    var below = 0, mid = y + bh / 2, bot = y + bh;
+    edges.forEach(function (e) {
+      var a = at[e.from], b = at[e.to], tone = e.tone ? ' ' + e.tone : '', mark = 'url(#ta-1-arrow' + (e.tone ? '-' + e.tone : '') + ')';
+      var g = mk('g', { 'data-edge': e.from + '>' + e.to }, gE), lx, ly;
+      if (e.back) {
+        mk('path', { d: 'M' + a.cx + ',' + bot + ' V' + (bot + 30) + ' H' + b.cx + ' V' + (bot + 4), 'class': 'e-line' + tone, 'marker-end': mark }, g);
+        lx = (a.cx + b.cx) / 2; ly = bot + 50; below = Math.max(below, 58);
+      } else {
+        mk('path', { d: 'M' + (a.x + a.w) + ',' + mid + ' H' + (b.x - 3), 'class': 'e-line' + tone, 'marker-end': mark }, g);
+        lx = (a.x + a.w + b.x) / 2; ly = mid - 9;
+      }
+      if (e.label) mk('text', { x: lx, y: ly, 'text-anchor': 'middle', style: 'font-size:13px;fill:' + (e.tone ? 'var(--' + e.tone + ')' : 'var(--muted)') }, g, e.label);
+    });
+    (row.notes || []).forEach(function (n) {
+      var b = at[n.under], lines = (n.title ? [n.title] : []).concat(n.lines);
+      if (n.tone === 'bad') {
+        var nw = Math.max.apply(null, lines.map(function (l) { return l.length; })) * 7 + 30, nh = lines.length * lineH + 18;
+        var nx = Math.max(Math.min(b.cx - nw / 2, b.x + b.w - nw), labelW), ny = bot + 36;
+        mk('path', { d: 'M' + b.cx + ',' + ny + ' V' + (bot + 4), style: 'fill:none;stroke:var(--bad);stroke-width:1.4', 'marker-end': 'url(#ta-1-arrow-bad)' }, gD);
+        mk('rect', { x: nx, y: ny, width: nw, height: nh, rx: 6, style: 'fill:var(--bad-soft);stroke:var(--bad);stroke-dasharray:5 4' }, gD);
+        lines.forEach(function (l, j) { mk('text', { x: nx + nw / 2, y: ny + 22 + j * lineH, 'text-anchor': 'middle', style: 'fill:var(--bad);font-size:13px' + (n.title && j === 0 ? ';font-weight:700;font-size:14px' : '') }, gD, l); });
+        below = Math.max(below, 36 + nh + 6);
+      } else {
+        lines.forEach(function (l, j) { mk('text', { x: b.cx, y: bot + 22 + j * lineH, 'text-anchor': 'middle', 'class': 'm', style: 'font-size:13px' }, gD, l); });
+        below = Math.max(below, 22 + lines.length * lineH);
+      }
+    });
+    y = bot + below + 6;
+  });
+  svg.setAttribute('viewBox', '-1 -2 ' + (W + 2) + ' ' + (y + 2)); svg.style.minWidth = '860px';
+})();
+</script>

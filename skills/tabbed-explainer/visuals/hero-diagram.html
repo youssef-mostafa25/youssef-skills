@@ -1,0 +1,77 @@
+<!--
+  hero-diagram · Explain an idea
+  Use when: a tab or page opens on one big headline, with the system it is about drawn right under it (hover a box to see its links).
+  Not for: a diagram the reader must study in detail (use blueprint or dependency-graph); more than one hero per page.
+  Fill: the eyebrow, the title placeholder and the lede in .hero-copy; DATA.nodes {id, label, sub?, x, y, color?} on a 1000×440 canvas and DATA.edges [from, to, label?].
+  Layout: the headline block comes FIRST and the drawing sits BELOW it, never behind it, and is shown whole at every width (no cropping); on a phone it scrolls
+  sideways inside its frame. Keep every node inside the canvas (x + box width ≤ 1000, y + 54 ≤ 440). If the lowest node ends well above
+  440, lower the viewBox height to that node's y + 54 + 30, so no empty band sits under the drawing.
+-->
+<figure class="viz" id="hero-1" data-focus>
+  <style>
+    #hero-1 .hero-stage { display: grid; gap: 14px; }
+    #hero-1 .viz-body { opacity: .8; transition: opacity .2s; }
+    #hero-1.is-focused .viz-body { opacity: 1; }
+    #hero-1 .viz-body svg { min-width: 640px; }
+    #hero-1 .hero-copy { display: grid; gap: 10px; padding: 4px 4px 16px; border-bottom: 1px solid var(--line); }
+    #hero-1 .hero-eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+    #hero-1 .viz-title { font-size: clamp(30px, 5.2vw, 54px); font-weight: 700; line-height: 1.04; letter-spacing: -.01em; max-width: 18ch; text-wrap: balance; }
+    #hero-1 .hero-lede { color: var(--muted); font-size: 16px; max-width: 60ch; }
+    :where(#hero-1) .n-box.is-k { stroke: var(--k); }
+  </style>
+  <div class="hero-stage">
+    <div class="hero-copy">
+      <span class="hero-eyebrow">Context search · layer 2 of 5</span>
+      <div class="viz-title">{{The headline: the page's point in under ten words}}</div>
+      <p class="hero-lede">One pass builds two things: table cards read on demand, and a ranked shortlist the Deep agent picks from. Today it finds 82 of 100.</p>
+    </div>
+    <div class="viz-body"><svg viewBox="0 0 1000 440" role="img" aria-label="{{the system under the headline, in a few words}}"></svg></div>
+  </div>
+  <p class="viz-note">{{One line under the hero, e.g. "Hover a box to see what it talks to"}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    nodes: [
+      { id: 'browser', label: 'Browser', sub: 'asks a question', x: 24, y: 60 },
+      { id: 'api', label: 'Agent API', sub: 'routes it', x: 236, y: 60 },
+      { id: 'deep', label: 'Deep agent', sub: '11 specialists', x: 452, y: 52, color: 'var(--c3)' },
+      { id: 'ranker', label: 'Ranker', sub: 'top 20 of 300', x: 690, y: 70, color: 'var(--c4)' },
+      { id: 'filter', label: 'filter', x: 860, y: 180 },
+      { id: 'cards', label: 'table cards', sub: '3.2 GB', x: 40, y: 180, color: 'var(--c2)' },
+      { id: 'runner', label: 'Runner', sub: '4 pods', x: 460, y: 190 },
+      { id: 'links', label: 'typed links', x: 250, y: 190 },
+      { id: 'db', label: 'Database', sub: '14 tables', x: 660, y: 220, color: 'var(--c1)' },
+      { id: 'bucket', label: 'Payload bucket', x: 70, y: 310 },
+      { id: 'questions', label: 'likely questions', x: 380, y: 330, color: 'var(--c2)' },
+      { id: 'chart', label: 'chart', x: 820, y: 330 }
+    ],
+    edges: [['browser', 'api', 'asks'], ['api', 'deep', 'hard ones'], ['deep', 'ranker', 'candidates'], ['ranker', 'filter', 'filtered by'],
+      ['deep', 'runner', 'run query'], ['runner', 'db', 'SQL'], ['bucket', 'cards', 'stores'], ['cards', 'links', 'builds'], ['links', 'deep', 'reads'],
+      ['questions', 'links', 'feeds'], ['db', 'chart', 'rows'], ['filter', 'chart']]
+  };
+  var fig = document.getElementById('hero-1'), svg = fig.querySelector('svg'), NS = 'http://www.w3.org/2000/svg';
+  function mk(t, a, p, txt) { var el = document.createElementNS(NS, t); for (var k in a) el.setAttribute(k, a[k]); if (txt != null) el.textContent = txt; (p || svg).appendChild(el); return el; }
+  var bH = 54, byId = {};
+  mk('defs', {}).innerHTML = '<marker id="hero-1-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" style="fill:var(--muted)"/></marker>';
+  var gE = mk('g', {}), gN = mk('g', {});
+  DATA.nodes.forEach(function (n) { n.w = Math.max(n.label.length, (n.sub || '').length) * 8 + 40; byId[n.id] = n; });
+  function exit(n, tx, ty, gap) {
+    var cx = n.x + n.w / 2, cy = n.y + bH / 2, dx = tx - cx, dy = ty - cy;
+    var t = Math.min(dx ? (n.w / 2 + gap) / Math.abs(dx) : 1e9, dy ? (bH / 2 + gap) / Math.abs(dy) : 1e9);
+    return [cx + dx * t, cy + dy * t];
+  }
+  DATA.edges.forEach(function (e) {
+    var a = byId[e[0]], b = byId[e[1]], p1 = exit(a, b.x + b.w / 2, b.y + bH / 2, 0), p2 = exit(b, a.x + a.w / 2, a.y + bH / 2, 3);
+    var g = mk('g', { 'data-edge': e[0] + '>' + e[1] }, gE);
+    mk('line', { x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1], 'class': 'e-line', 'marker-end': 'url(#hero-1-arrow)' }, g);
+    if (e[2]) mk('text', { x: (p1[0] + p2[0]) / 2, y: (p1[1] + p2[1]) / 2 - 6, 'text-anchor': 'middle', 'class': 'm', style: 'font-family:var(--font-mono)' }, g, e[2]);
+  });
+  DATA.nodes.forEach(function (n) {
+    var g = mk('g', { transform: 'translate(' + n.x + ',' + n.y + ')', 'data-node': n.id, 'data-label': n.label }, gN);
+    mk('rect', { width: n.w, height: bH, rx: 9, 'class': 'n-box' + (n.color ? ' is-k' : ''), style: n.color ? '--k:' + n.color : '' }, g);
+    mk('text', { x: n.w / 2, y: n.sub ? 23 : 32, 'text-anchor': 'middle', style: 'font-family:var(--font-mono);font-size:14px' + (n.color ? ';fill:' + n.color : '') }, g, n.label);
+    if (n.sub) mk('text', { x: n.w / 2, y: 41, 'text-anchor': 'middle', 'class': 'm', style: 'font-family:var(--font-mono)' }, g, n.sub);
+  });
+})();
+</script>

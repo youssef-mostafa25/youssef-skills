@@ -1,0 +1,89 @@
+<!--
+  blueprint · How parts connect
+  Use when: an architecture overview should feel like a drawing: a few layers as outlined panels on a dark grid, with glowing labelled wires between them. Dark in both themes on purpose.
+  Not for: a chain of prerequisites (use dependency-graph); anything that must print in light.
+  Fill: DATA.ask / DATA.agent / DATA.out (panel title, colour and boxes), DATA.edges [from, to, label?]. The dark palette lives in the scoped style as local tokens; that is the one place fixed colours are allowed.
+-->
+<figure class="viz" id="bp-1" data-focus>
+  <style>
+    #bp-1 {
+      --bg: #0a1018; --surface: #0f1822; --sunk: #16212e; --ink: #dbe7f3; --muted: #8597ad; --line: #2b3b4e;
+      --accent: #45e0b0; --accent-soft: #10302a; --c1: #5fb2ff; --c2: #f7b84b; --c3: #45e0b0; --c4: #a98bff; --c5: #ff7fb0; --c6: #8aa0b8;
+      --up: #5fb2ff; --down: #ff8a6e; color-scheme: dark; color: var(--ink); border-color: var(--line);
+      background-color: var(--bg);
+      background-image: linear-gradient(color-mix(in srgb, var(--c1) 8%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--c1) 8%, transparent) 1px, transparent 1px);
+      background-size: 22px 22px;
+    }
+    #bp-1 .viz-body svg { font-family: var(--font-mono); }
+    #bp-1 .viz-title { font-family: var(--font-mono); letter-spacing: .02em; }
+    :where(#bp-1) .n-box { fill: var(--surface); }
+    :where(#bp-1) .n-box.is-k { fill: color-mix(in srgb, var(--k) 7%, var(--surface)); stroke: var(--k); }
+    #bp-1 .e-line.is-k { stroke: var(--k); }
+  </style>
+  <div class="viz-title">{{The point, e.g. "One orchestrator, eleven specialists, three streams back to the user"}}</div>
+  <div class="viz-body"><svg role="img" aria-label="{{the architecture this drawing shows}}"></svg></div>
+  <p class="viz-note">{{How to read it, e.g. "Panels are layers; hover any box to light up the wires it sends and receives"}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    ask: { title: 'Layer 1 — the ask', color: 'c1', nodes: [
+      { id: 'browser', label: 'Browser', sub: 'question typed' },
+      { id: 'api', label: 'Agent API', sub: 'routes the ask' }
+    ] },
+    agent: { title: 'Layer 2 — the deep agent', color: 'c3', fanNote: 'one at a time, with a brief',
+      hub: { id: 'orch', label: 'orchestrator', sub: 'holds no tools' },
+      specialists: [
+        { id: 'plan', label: 'plan the search' }, { id: 'find', label: 'find tables' }, { id: 'rank', label: 'rank candidates' },
+        { id: 'query', label: 'write the query' }, { id: 'draw', label: 'draw it' }, { id: 'check', label: 'check the answer' }
+      ] },
+    out: { title: 'Streamed back to you', color: 'c1', footer: 'one counter orders all three', nodes: [
+      { id: 'think', label: 'the thinking stream', sub: 'one line per step', note: 'no table names', color: 'c3' },
+      { id: 'finds', label: 'findings + charts', sub: 'only when there is one', note: 'the durable record', color: 'c2' },
+      { id: 'close', label: 'the closing answer', sub: 'two or three sentences', note: '+ grounded follow-ups', color: 'c4' }
+    ] },
+    edges: [['browser', 'api', 'POST /ask'], ['api', 'orch', 'one request'],
+      ['orch', 'plan'], ['orch', 'find'], ['orch', 'rank'], ['orch', 'query'], ['orch', 'draw'], ['orch', 'check'],
+      ['plan', 'think'], ['draw', 'finds'], ['check', 'close']]
+  };
+  var fig = document.getElementById('bp-1'), svg = fig.querySelector('svg'), NS = 'http://www.w3.org/2000/svg';
+  function mk(t, a, p, txt) { var el = document.createElementNS(NS, t); for (var k in a) el.setAttribute(k, a[k]); if (txt != null) el.textContent = txt; (p || svg).appendChild(el); return el; }
+  function c(k) { return 'var(--' + k + ')'; }
+  var W = 1000, top = 52, at = {}, A = DATA.ask, G = DATA.agent, O = DATA.out;
+  var listH = G.specialists.length * 42 - 10, outH = O.nodes.length * 86 - 12, bodyH = Math.max(listH, outH, A.nodes.length * 128 - 70), H = top + bodyH + 46;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.style.minWidth = '760px';
+  var defs = mk('defs', {}), gP = mk('g', {}), gE = mk('g', {}), gN = mk('g', {});
+  ['c1', 'c2', 'c3', 'c4', 'muted'].forEach(function (k) {
+    defs.innerHTML += '<marker id="bp-1-arrow-' + k + '" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" style="fill:' + c(k) + '"/></marker>';
+  });
+  function panel(x, w, title, k) {
+    mk('rect', { x: x, y: 1, width: w, height: H - 2, rx: 10, style: 'fill:color-mix(in srgb, ' + c(k) + ' 4%, transparent);stroke:color-mix(in srgb, ' + c(k) + ' 70%, transparent)' }, gP);
+    mk('text', { x: x + 18, y: 30, style: 'fill:' + c(k) + ';font-size:11.5px;letter-spacing:.16em' }, gP, title.toUpperCase());
+  }
+  function box(n, x, y, w, h, k, center) {
+    var g = mk('g', { transform: 'translate(' + x + ',' + y + ')', 'data-node': n.id, 'data-label': n.label }, gN);
+    mk('rect', { width: w, height: h, rx: 7, 'class': 'n-box' + (k ? ' is-k' : ''), style: k ? '--k:' + c(k) : '' }, g);
+    var lines = [[n.label, k ? 'fill:' + c(k) + ';font-size:13px' : 'font-size:12px'], [n.sub, 'font-size:11.5px'], [n.note, 'fill:var(--muted);font-size:10.5px']].filter(function (l) { return l[0]; });
+    lines.forEach(function (l, i) { mk('text', { x: center ? w / 2 : 14, y: h / 2 + 4 + (i - (lines.length - 1) / 2) * 18, 'text-anchor': center ? 'middle' : 'start', style: l[1] }, g, l[0]); });
+    at[n.id] = { x: x, y: y, w: w, h: h, k: k };
+  }
+  panel(0, 196, A.title, A.color); panel(226, 444, G.title, G.color); panel(704, 296, O.title, O.color);
+  var ay = top + (bodyH - (A.nodes.length * 128 - 70)) / 2;
+  A.nodes.forEach(function (n, i) { box(n, 18, ay + i * 128, 160, 58, A.color, true); });
+  box(G.hub, 246, top + (bodyH - 84) / 2, 170, 84, G.color, true);
+  if (G.fanNote) mk('text', { x: 331, y: top + (bodyH + 84) / 2 + 22, 'text-anchor': 'middle', style: 'fill:var(--muted);font-size:10.5px' }, gP, G.fanNote);
+  var sy = top + (bodyH - listH) / 2;
+  G.specialists.forEach(function (n, i) { box(n, 496, sy + i * 42, 156, 32, null, true); });
+  var oy = top + (bodyH - outH) / 2;
+  O.nodes.forEach(function (n, i) { box(n, 722, oy + i * 86, 260, 74, n.color || O.color, true); });
+  if (O.footer) mk('text', { x: 722, y: H - 18, style: 'fill:var(--muted);font-size:11px' }, gP, O.footer);
+  DATA.edges.forEach(function (e) {
+    var a = at[e[0]], b = at[e[1]], k = b.k || a.k || 'muted', d, lx, ly;
+    if (Math.abs(a.x - b.x) < 4) { var x = a.x + a.w / 2; d = 'M' + x + ',' + (a.y + a.h) + ' L' + x + ',' + (b.y - 3); lx = x + 8; ly = (a.y + a.h + b.y) / 2 + 4; }
+    else { var x1 = a.x + a.w, y1 = a.y + a.h / 2, x2 = b.x - 3, y2 = b.y + b.h / 2, m = (x2 - x1) / 2; d = 'M' + x1 + ',' + y1 + ' C' + (x1 + m) + ',' + y1 + ' ' + (x2 - m) + ',' + y2 + ' ' + x2 + ',' + y2; lx = (x1 + x2) / 2; ly = (y1 + y2) / 2 - 8; }
+    var g = mk('g', { 'data-edge': e[0] + '>' + e[1] }, gE);
+    mk('path', { d: d, 'class': 'e-line is-k', style: '--k:' + c(k), 'marker-end': 'url(#bp-1-arrow-' + k + ')' }, g);
+    if (e[2]) mk('text', { x: lx, y: ly, 'text-anchor': Math.abs(a.x - b.x) < 4 ? 'start' : 'middle', style: 'fill:' + c(k) + ';font-size:10.5px;paint-order:stroke;stroke:var(--bg);stroke-width:4px' }, g, e[2]);
+  });
+})();
+</script>

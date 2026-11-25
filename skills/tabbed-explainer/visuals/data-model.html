@@ -1,0 +1,95 @@
+<!--
+  data-model · How parts connect / Hierarchy
+  Use when: the question is what kinds of record exist and how they point at each other (entities as boxes, typed links like HAS or READS).
+  Not for: runtime calls between services (use blueprint) or a pure parent/child tree (use tree).
+  Fill: DATA.nodes {id, label, kind, col, row, existing?}, DATA.links {from, to, label, dashed?} (from === to draws a self-loop), DATA.KINDS for colours.
+-->
+<figure class="viz" id="dm-1" data-focus>
+  <style>
+    :where(#dm-1) .n-box.k-c1 { fill: color-mix(in srgb, var(--c1) 12%, var(--surface)); stroke: var(--c1); }
+    :where(#dm-1) .n-box.k-c2 { fill: color-mix(in srgb, var(--c2) 13%, var(--surface)); stroke: var(--c2); }
+    :where(#dm-1) .n-box.k-c3 { fill: color-mix(in srgb, var(--c3) 13%, var(--surface)); stroke: var(--c3); }
+    #dm-1 .dm-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 250px); gap: 14px; }
+    @media (max-width: 760px) { #dm-1 .dm-wrap { grid-template-columns: minmax(0, 1fr); } }
+  </style>
+  <div class="viz-title">{{The point, e.g. "Every search result is a Table or Column; context records only point at them"}}</div>
+  <div class="dm-wrap">
+    <div class="viz-body"><svg role="img" aria-label="{{the record types and how they link}}"></svg></div>
+    <div class="focus-panel" data-focus-panel><span class="viz-note">Hover a record type to see what points at it (blue) and what it points at (red). Click to pin it and list its links.</span></div>
+  </div>
+  <div class="viz-key"></div>
+  <p class="viz-note">{{How to read it, e.g. "Arrows read as sentences: a Source HAS Datasets, a Search READS Tables"}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    KINDS: { schema: ['Schema', 'var(--c1)', 'k-c1'], context: ['Domain context', 'var(--c2)', 'k-c2'], component: ['Search components', 'var(--c3)', 'k-c3'] },
+    nodes: [
+      { id: 'source', label: 'Source', kind: 'schema', col: 0, row: 0 },
+      { id: 'dataset', label: 'Dataset', kind: 'schema', col: 1, row: 0 },
+      { id: 'table', label: 'Table', kind: 'schema', col: 2, row: 0 },
+      { id: 'column', label: 'Column', kind: 'schema', col: 3, row: 0 },
+      { id: 'entity', label: 'Entity', kind: 'context', col: 4, row: 0 },
+      { id: 'search', label: 'Search', kind: 'component', col: 2, row: 1 },
+      { id: 'rule', label: 'Rule', kind: 'context', col: 0, row: 1 },
+      { id: 'workspace', label: 'Workspace', col: 1, row: 1, existing: true },
+      { id: 'metric', label: 'Metric', kind: 'context', col: 3, row: 1 },
+      { id: 'note', label: 'Note', kind: 'context', col: 4, row: 1 },
+      { id: 'agent', label: 'Subagent', col: 1, row: 2, existing: true }
+    ],
+    links: [
+      { from: 'source', to: 'dataset', label: 'HAS' },
+      { from: 'dataset', to: 'table', label: 'HAS' },
+      { from: 'table', to: 'column', label: 'HAS' },
+      { from: 'entity', to: 'column', label: 'VALUE_OF' },
+      { from: 'table', to: 'table', label: 'FK' },
+      { from: 'rule', to: 'source', label: 'APPLIES_TO' },
+      { from: 'rule', to: 'workspace', label: 'SCOPES' },
+      { from: 'workspace', to: 'search', label: 'HOLDS' },
+      { from: 'search', to: 'table', label: 'READS' },
+      { from: 'search', to: 'search', label: 'SHOWS' },
+      { from: 'metric', to: 'column', label: 'USES' },
+      { from: 'note', to: 'entity', label: 'ABOUT (any)', dashed: true },
+      { from: 'rule', to: 'agent', label: 'APPLIES_TO' }
+    ]
+  };
+  var fig = document.getElementById('dm-1'), svg = fig.querySelector('svg'), NS = 'http://www.w3.org/2000/svg';
+  function mk(t, a, p, txt) { var el = document.createElementNS(NS, t); for (var k in a) el.setAttribute(k, a[k]); if (txt != null) el.textContent = txt; (p || svg).appendChild(el); return el; }
+  var bW = 150, bH = 46, colW = 226, rowH = 150, pad = 4, byId = {}, cols = 0, rows = 0;
+  DATA.nodes.forEach(function (n) { n.x = pad + n.col * colW; n.y = pad + n.row * rowH; byId[n.id] = n; cols = Math.max(cols, n.col + 1); rows = Math.max(rows, n.row + 1); });
+  var W = pad * 2 + (cols - 1) * colW + bW, H = pad * 2 + (rows - 1) * rowH + bH + 50;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.style.minWidth = '720px';
+  mk('defs', {}).innerHTML = '<marker id="dm-1-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" style="fill:var(--muted)"/></marker>';
+  var gE = mk('g', {}), gN = mk('g', {}), LBL = 'font-family:var(--font-mono);font-size:11px;letter-spacing:.04em;paint-order:stroke;stroke:var(--surface);stroke-width:4px';
+  DATA.links.forEach(function (l) {
+    var a = byId[l.from], b = byId[l.to], d, lx, ly, anchor = 'start';
+    if (a === b) { // self-loop under the box's right half, label beside it
+      var s = a.x + bW * 0.6, e = a.x + bW * 0.9, y = a.y + bH;
+      d = 'M' + s + ',' + y + ' C' + s + ',' + (y + 40) + ' ' + e + ',' + (y + 40) + ' ' + e + ',' + (y + 3); lx = e + 10; ly = y + 26;
+    } else if (a.row === b.row) { // same row: straight across, label above
+      var right = b.x > a.x, x1 = right ? a.x + bW : a.x, x2 = right ? b.x - 2 : b.x + bW + 2, yy = a.y + bH / 2;
+      d = 'M' + x1 + ',' + yy + ' L' + x2 + ',' + yy; lx = (x1 + x2) / 2; ly = yy - 8; anchor = 'middle';
+    } else if (a.col === b.col) { // same column: straight up or down, label to the right
+      var up = b.y < a.y, xx = a.x + bW / 2, y1 = up ? a.y : a.y + bH, y2 = up ? b.y + bH + 2 : b.y - 2;
+      d = 'M' + xx + ',' + y1 + ' L' + xx + ',' + y2; lx = xx + 9; ly = (y1 + y2) / 2 + 4;
+      if (a.col === cols - 1) { lx = xx - 9; anchor = 'end'; } // last column: label on the inside
+    } else { // elbow: leave through the top or bottom, turn, enter the side
+      var down = b.y > a.y, sx = a.x + bW * 0.8, sy = down ? a.y + bH : a.y, ty = b.y + bH / 2, toRight = b.x > a.x, tx = toRight ? b.x - 2 : b.x + bW + 2;
+      d = 'M' + sx + ',' + sy + ' L' + sx + ',' + ty + ' L' + tx + ',' + ty; lx = sx + 10; ly = ty - 8;
+    }
+    var g = mk('g', { 'data-edge': l.from + '>' + l.to, 'data-tip': a.label + ' ' + l.label + ' ' + b.label }, gE);
+    var p = mk('path', { d: d, 'class': 'e-line', 'marker-end': 'url(#dm-1-arrow)' }, g);
+    if (l.dashed) p.setAttribute('stroke-dasharray', '5 4');
+    mk('text', { x: lx, y: ly, 'text-anchor': anchor, 'class': 'm', style: LBL }, g, l.label);
+  });
+  DATA.nodes.forEach(function (n) {
+    var k = DATA.KINDS[n.kind] || ['', '', ''];
+    var g = mk('g', { transform: 'translate(' + n.x + ',' + n.y + ')', 'data-node': n.id, 'data-label': n.label }, gN);
+    var r = mk('rect', { width: bW, height: bH, rx: 9, 'class': 'n-box ' + k[2] }, g);
+    if (n.existing) r.setAttribute('stroke-dasharray', '6 4');
+    mk('text', { x: bW / 2, y: bH / 2 + 5, 'text-anchor': 'middle', style: 'font-weight:600;font-size:14px' }, g, n.label);
+  });
+  fig.querySelector('.viz-key').innerHTML = Object.keys(DATA.KINDS).map(function (k) { return '<span><i style="--k:' + DATA.KINDS[k][1] + '"></i>' + DATA.KINDS[k][0] + '</span>'; }).join('') +
+    '<span><i style="--k:transparent;border:1.5px dashed var(--muted)"></i>Dashed box: a record that already exists</span>';
+})();
+</script>

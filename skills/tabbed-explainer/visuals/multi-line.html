@@ -1,0 +1,88 @@
+<!--
+  multi-line · Change over time / Compare options
+  Use when: several options are measured along the same x (K, steps, days) and the question is which one climbs highest, against a best-possible ceiling.
+  Not for: one number per item (use progress-list or bars-limit). It also covers a single series against a limit and two lines that cross.
+  Fill: the DATA object only: x values, yMax/yTicks, axis titles, and series [{name, values, color, shape}]; mark the ceiling series with ceiling: true.
+-->
+<figure class="viz" id="ml-1">
+  <style>
+    #ml-1 .ml-wrap { position: relative; min-width: 560px; }
+    #ml-1 .ml-tip { position: absolute; z-index: 2; pointer-events: none; background: var(--ink); color: var(--bg); border-radius: 6px; padding: 6px 9px; font-size: 12px; line-height: 1.45; white-space: nowrap; }
+    #ml-1 .ml-tip b { font-family: var(--font-mono); font-weight: 600; }
+    #ml-1 .ml-tip i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+    #ml-1 .ml-tip span { float: right; margin-left: 14px; font-family: var(--font-mono); }
+  </style>
+  <div class="viz-title">{{The point of the chart, e.g. "Rank + pin gets closest to the ceiling from K = 10 on"}}</div>
+  <div class="viz-body"><div class="ml-wrap"><svg role="img" aria-label="Line chart: found out of 100 at each K, one line per search method, with a dashed best-possible ceiling"></svg><div class="ml-tip" hidden></div></div></div>
+  <p class="viz-note">{{How to read it, e.g. "Higher is better. Hover anywhere on the chart to read every line at that K."}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    yTitle: 'Found, of 100 (recall at K)',
+    xTitle: 'K, items counted from the top',
+    x: [1, 3, 5, 10, 15, 20, 30],
+    yMax: 100, yTicks: [0, 25, 50, 75, 100],
+    series: [
+      { name: 'Best possible', values: [21, 59, 84, 99, 100, 100, 100], ceiling: true },
+      { name: 'Rank + pin', values: [10, 31, 46, 65, 72, 75, 76], color: 'var(--c4)', shape: 'circle' },
+      { name: 'Hybrid search', values: [9, 27, 43, 62, 69, 72, 73], color: 'var(--c1)', shape: 'square' },
+      { name: 'Tree index', values: [8, 25, 38, 46, 46, 46, 46], color: 'var(--c3)', shape: 'triangle' },
+      { name: "Today's search", values: [0, 0.3, 0.4, 1.5, 1.7, 2.3, 3.6], color: 'var(--c2)', shape: 'diamond' }
+    ]
+  };
+  var fig = document.getElementById('ml-1'), svg = fig.querySelector('svg'), tip = fig.querySelector('.ml-tip'), wrap = fig.querySelector('.ml-wrap');
+  var NS = 'http://www.w3.org/2000/svg';
+  var W = 720, H = 370, L = 46, R = 140, T = 40, B = 52, pw = W - L - R, ph = H - T - B;
+  var x0 = DATA.x[0], x1 = DATA.x[DATA.x.length - 1];
+  function X(v) { return L + (v - x0) / (x1 - x0) * pw; }
+  function Y(v) { return T + ph - v / DATA.yMax * ph; }
+  function mk(t, a, parent, text) { var el = document.createElementNS(NS, t); for (var k in a) el.setAttribute(k, a[k]); if (text != null) el.textContent = text; (parent || svg).appendChild(el); return el; }
+  function fmt(v) { return Math.round(v * 10) / 10; }
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  mk('text', { x: 0, y: 14, style: 'font-weight:600' }, null, DATA.yTitle);
+  DATA.yTicks.forEach(function (t) {
+    mk('line', { x1: L, x2: L + pw, y1: Y(t), y2: Y(t), style: 'stroke:var(--line)' });
+    mk('text', { x: L - 8, y: Y(t) + 4, 'text-anchor': 'end', 'class': 'm' }, null, t);
+  });
+  DATA.x.forEach(function (v) { mk('text', { x: X(v), y: T + ph + 18, 'text-anchor': 'middle', 'class': 'm' }, null, v); });
+  mk('text', { x: L + pw / 2, y: H - 6, 'text-anchor': 'middle', 'class': 'm' }, null, DATA.xTitle);
+  function marker(s, x, y, parent) {
+    var st = 'fill:' + s.color + ';stroke:var(--surface);stroke-width:1.5';
+    if (s.shape === 'square') return mk('rect', { x: x - 5, y: y - 5, width: 10, height: 10, rx: 1.5, style: st }, parent);
+    if (s.shape === 'triangle') return mk('path', { d: 'M' + x + ',' + (y - 6.5) + ' L' + (x + 6) + ',' + (y + 4.5) + ' L' + (x - 6) + ',' + (y + 4.5) + ' Z', style: st }, parent);
+    if (s.shape === 'diamond') return mk('path', { d: 'M' + x + ',' + (y - 6.5) + ' L' + (x + 6.5) + ',' + y + ' L' + x + ',' + (y + 6.5) + ' L' + (x - 6.5) + ',' + y + ' Z', style: st }, parent);
+    return mk('circle', { cx: x, cy: y, r: 5.5, style: st }, parent);
+  }
+  var cross = mk('line', { y1: T - 6, y2: T + ph, style: 'stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3;visibility:hidden' });
+  DATA.series.forEach(function (s) {
+    if (s.ceiling) s.color = 'var(--muted)';
+    var d = s.values.map(function (v, i) { return (i ? 'L' : 'M') + X(DATA.x[i]) + ',' + Y(v); }).join(' ');
+    mk('path', { d: d, style: 'fill:none;stroke:' + s.color + ';stroke-width:' + (s.ceiling ? 2 : 2.4) + (s.ceiling ? ';stroke-dasharray:7 5' : '') + ';stroke-linejoin:round' });
+    if (!s.ceiling) s.values.forEach(function (v, i) { marker(s, X(DATA.x[i]), Y(v)); });
+    s.hot = mk('circle', { r: 8, style: 'fill:none;stroke:' + s.color + ';stroke-width:2;visibility:hidden' });
+  });
+  // End labels, pushed apart so they never overlap.
+  var labs = DATA.series.map(function (s) { return { s: s, y: Y(s.values[s.values.length - 1]) + 4 }; }).sort(function (a, b) { return a.y - b.y; });
+  for (var i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 15) labs[i].y = labs[i - 1].y + 15;
+  for (i = labs.length - 2; i >= 0; i--) if (labs[i + 1].y > T + ph + 4 && labs[i + 1].y - labs[i].y < 15) labs[i].y = labs[i + 1].y - 15;
+  labs.forEach(function (l) { mk('text', { x: L + pw + 12, y: Math.min(l.y, T + ph + 4), style: 'font-size:13px;font-weight:500' }, null, l.s.name); });
+  // Crosshair: nearest x, every series' value in one box.
+  var hit = mk('rect', { x: L - 10, y: T - 10, width: pw + 20, height: ph + 20, style: 'fill:transparent' });
+  function hide() { tip.hidden = true; cross.style.visibility = 'hidden'; DATA.series.forEach(function (s) { s.hot.style.visibility = 'hidden'; }); }
+  function show(e) {
+    var r = svg.getBoundingClientRect(), k = r.width / W, sx = (e.clientX - r.left) / k, best = 0;
+    DATA.x.forEach(function (v, j) { if (Math.abs(X(v) - sx) < Math.abs(X(DATA.x[best]) - sx)) best = j; });
+    var cx = X(DATA.x[best]);
+    cross.setAttribute('x1', cx); cross.setAttribute('x2', cx); cross.style.visibility = 'visible';
+    var rows = DATA.series.map(function (s) { s.hot.setAttribute('cx', cx); s.hot.setAttribute('cy', Y(s.values[best])); s.hot.style.visibility = 'visible'; return s; })
+      .slice().sort(function (a, b) { return b.values[best] - a.values[best]; });
+    tip.innerHTML = '<b>K = ' + DATA.x[best] + '</b>' + rows.map(function (s) { return '<div><i style="background:' + s.color + '"></i>' + s.name + '<span>' + fmt(s.values[best]) + '</span></div>'; }).join('');
+    tip.hidden = false;
+    var wr = wrap.getBoundingClientRect(), px = r.left - wr.left + cx * k, left = px + 14;
+    if (left + tip.offsetWidth > wr.width - 4) left = px - 14 - tip.offsetWidth;
+    tip.style.left = Math.max(0, left) + 'px'; tip.style.top = (r.top - wr.top + T * k) + 'px';
+  }
+  hit.addEventListener('pointermove', show); hit.addEventListener('pointerdown', show); hit.addEventListener('pointerleave', hide);
+})();
+</script>

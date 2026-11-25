@@ -1,0 +1,53 @@
+<!--
+  progress-list · Before → after / Status
+  Use when: many unrelated metrics each moved from a before value to an after value, in their own units, and the reader scans how far each one went.
+  Not for: values against a hard limit (use bars-limit) or options on two measures at once (use scatter-ref).
+  Fill: the DATA object: rows {label, before, after, unit?, better?: 'lower'|'higher'} (better defaults to DATA.better).
+  The grey bar is the before value, the coloured bar under it the after value, both on that row's own scale.
+-->
+<figure class="viz" id="pl-1">
+  <style>
+    #pl-1 .pl-list { display: grid; gap: 16px; }
+    #pl-1 .pl-row { display: grid; gap: 5px; }
+    #pl-1 .pl-top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px 16px; flex-wrap: wrap; }
+    #pl-1 .pl-lab { font-size: 15px; }
+    #pl-1 .pl-val { font-family: var(--font-mono); font-size: 13px; color: var(--muted); white-space: nowrap; margin-left: auto; font-variant-numeric: tabular-nums; }
+    #pl-1 .pl-bar { height: 8px; border-radius: 999px; min-width: 8px; }
+    #pl-1 .pl-before { background: color-mix(in srgb, var(--muted) 38%, transparent); }
+  </style>
+  <div class="viz-title">{{The point of the list, e.g. "Every search path got faster; only the build got slower"}}</div>
+  <div class="viz-body"><div class="pl-list" role="img"></div></div>
+  <div class="viz-key"></div>
+  <p class="viz-note">{{How to read it, e.g. "Grey is before, green is after, each row on its own scale. Median of 30 runs."}}</p>
+</figure>
+<script>
+(function () {
+  var DATA = {
+    better: 'lower',
+    rows: [
+      { label: 'Candidate search, median', before: 240, after: 130, unit: 'ms' },
+      { label: 'Candidate search, slowest 5%', before: 610, after: 240, unit: 'ms' },
+      { label: 'Source catalog per subagent (40 sources)', before: 4120, after: 2870, unit: 'tokens' },
+      { label: 'Embedding calls, 8 parallel searches', before: 8, after: 1 },
+      { label: 'Ingestion pod peak memory', before: 1780, after: 1050, unit: 'MB' },
+      { label: 'Deep agent turn, median', before: 48, after: 31, unit: 's' },
+      { label: 'Card build per dataset', before: 42, after: 55, unit: 's' }
+    ]
+  };
+  var fig = document.getElementById('pl-1'), list = fig.querySelector('.pl-list'), anyWorse = false;
+  list.setAttribute('aria-label', 'Before and after values for ' + DATA.rows.length + ' measures');
+  list.innerHTML = DATA.rows.map(function (r) {
+    var max = Math.max(r.before, r.after), unit = r.unit ? ' ' + r.unit : '';
+    var better = (r.better || DATA.better) === 'higher' ? r.after > r.before : r.after < r.before;
+    if (!better && r.after !== r.before) anyWorse = true;
+    var col = better || r.after === r.before ? 'var(--c3)' : 'var(--bad)';
+    var change = r.before ? Math.round((r.after - r.before) / r.before * 100) : 0;
+    var f = function (v) { return v.toLocaleString('en-US'); };
+    return '<div class="pl-row"><div class="pl-top"><span class="pl-lab">' + r.label + '</span><span class="pl-val">' + f(r.before) + ' → ' + f(r.after) + unit + '</span></div>' +
+      '<div class="pl-bar pl-before" style="width:' + (r.before / max * 100).toFixed(2) + '%" data-tip="before: ' + f(r.before) + unit + '"></div>' +
+      '<div class="pl-bar" style="width:' + (r.after / max * 100).toFixed(2) + '%;background:' + col + '" data-tip="after: ' + f(r.after) + unit + ' (' + (change > 0 ? '+' : '') + change + '%)"></div></div>';
+  }).join('');
+  fig.querySelector('.viz-key').innerHTML = '<span><i style="--k:color-mix(in srgb, var(--muted) 38%, transparent)"></i>before</span><span><i style="--k:var(--c3)"></i>after, better</span>' +
+    (anyWorse ? '<span><i style="--k:var(--bad)"></i>after, worse</span>' : '');
+})();
+</script>

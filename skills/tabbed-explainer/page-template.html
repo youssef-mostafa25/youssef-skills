@@ -1,0 +1,313 @@
+<!--
+  tabbed-explainer page template. Copy it to the scratchpad, keep the <style> and <script>
+  blocks verbatim, and fill in only the content: the title, the header, one tab button and
+  one panel per tab, and the visuals copied from the visuals/ folder. Delete every HTML comment and
+  any optional block you don't use. Check that no {{ remains before publishing.
+-->
+<title>{{PAGE_NAME}}</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a tabbed explainer. Header with the point on top, a sticky tab bar, one panel per tab.
+   Visuals come from the visuals/ folder and read only these tokens, so every page looks like one family. */
+:root {
+  --bg: #f4f6f9; --surface: #ffffff; --sunk: #eef1f5; --ink: #18202c; --muted: #586274; --line: #d9dee6;
+  --accent: #2f5f9a; --accent-soft: #e3ecf8;
+  --good: #2c7a45; --good-soft: #e1f2e6; --warn: #946200; --warn-soft: #fbf0d6; --bad: #b3261e; --bad-soft: #fbe6e4;
+  /* Chart series, in order of use. */
+  --c1: #2f6fdf; --c2: #d97a1e; --c3: #2a9d6a; --c4: #8a4fc9; --c5: #c2477e; --c6: #6b7a90;
+  /* Focus: what the selected item needs (up) and what needs it (down). */
+  --up: #2f6fdf; --down: #d4472b;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151c; --surface: #181e27; --sunk: #1f2631; --ink: #e6eaf0; --muted: #9aa4b5; --line: #2c3542;
+    --accent: #8fb4e6; --accent-soft: #1b2a3f;
+    --good: #7fcf98; --good-soft: #173222; --warn: #e6bb5c; --warn-soft: #3a2f14; --bad: #f08a82; --bad-soft: #3d1c1a;
+    --c1: #7aa7f5; --c2: #f0a35a; --c3: #5fcf9c; --c4: #b98cf0; --c5: #ef86b4; --c6: #9aa8bd;
+    --up: #7aa7f5; --down: #ff8a6e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151c; --surface: #181e27; --sunk: #1f2631; --ink: #e6eaf0; --muted: #9aa4b5; --line: #2c3542;
+  --accent: #8fb4e6; --accent-soft: #1b2a3f;
+  --good: #7fcf98; --good-soft: #173222; --warn: #e6bb5c; --warn-soft: #3a2f14; --bad: #f08a82; --bad-soft: #3d1c1a;
+  --c1: #7aa7f5; --c2: #f0a35a; --c3: #5fcf9c; --c4: #b98cf0; --c5: #ef86b4; --c6: #9aa8bd;
+  --up: #7aa7f5; --down: #ff8a6e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 72px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.page { max-width: 1200px; margin-inline: auto; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(28px, 4.4vw, 40px); font-weight: 700; }
+h2 { font-size: 22px; font-weight: 700; }
+h3 { font-size: 17px; font-weight: 600; }
+p { margin: 0; max-width: 72ch; }
+code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Header: eyebrow, the page's question or point, a two-line lede. */
+header { display: grid; gap: 12px; }
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.lede { color: var(--muted); font-size: 16px; }
+
+/* Tabs */
+.tablist { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 4; background: var(--bg); display: flex; flex-wrap: wrap; gap: 8px; padding-block: 10px 12px; border-bottom: 1px solid var(--line); }
+.tablist button { font: inherit; font-family: var(--font-display); font-weight: 600; font-size: 15px; padding: 8px 15px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink); cursor: pointer; display: grid; gap: 1px; text-align: left; }
+.tablist button small { font-family: var(--font-body); font-weight: 400; font-size: 12px; color: var(--muted); }
+.tablist button[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.tablist button[aria-selected="true"] small { color: var(--bg); opacity: .75; }
+[role="tabpanel"] { display: grid; gap: 36px; }
+section { display: grid; gap: 14px; min-width: 0; }
+.section-head { display: grid; gap: 6px; }
+.section-head p { color: var(--muted); }
+
+/* The point box: one sentence the reader must leave with. */
+.point { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 8px; padding: 14px 18px; display: grid; gap: 6px; }
+.point strong { font-family: var(--font-display); font-size: 16px; }
+.point.good { border-left-color: var(--good); } .point.warn { border-left-color: var(--warn); } .point.bad { border-left-color: var(--bad); }
+
+/* Example and flow, side by side (sha3bolly: every explanation gets one of each). */
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 14px; }
+.pair > * { min-width: 0; }
+.label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+pre.code { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto;
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55; white-space: pre; }
+
+/* Tables (supporting detail only; the page itself is organised by tabs). */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+th { background: var(--sunk); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.chip { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; background: var(--sunk); color: var(--ink); }
+.chip.good { background: var(--good-soft); color: var(--good); } .chip.warn { background: var(--warn-soft); color: var(--warn); } .chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.accent { background: var(--accent-soft); color: var(--accent); }
+/* A clickable item name anywhere on the page: jumps to its diagram and pins it. */
+[data-goto-node] { cursor: pointer; font-family: var(--font-mono); font-weight: 600; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+
+/* ---------- Visual frame (every visual from visuals/ sits in one) ---------- */
+figure.viz { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: grid; gap: 12px; min-width: 0; }
+.viz-title { font-family: var(--font-display); font-weight: 600; font-size: 16px; }
+.viz-body { min-width: 0; overflow-x: auto; }
+.viz-body svg { display: block; width: 100%; height: auto; font-family: var(--font-body); }
+.viz-body svg text { fill: var(--ink); font-size: 12px; }
+.viz-body svg .m { fill: var(--muted); font-size: 11px; }
+.viz-note { font-size: 13px; color: var(--muted); max-width: 90ch; }
+.viz-key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.viz-key i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; background: var(--k); margin-right: 6px; vertical-align: -1px; }
+.viz-tip { position: fixed; z-index: 30; max-width: 280px; background: var(--ink); color: var(--bg); font-size: 12.5px; line-height: 1.4; padding: 6px 9px; border-radius: 6px; pointer-events: none; white-space: pre-line; }
+
+/* ---------- Focus: hover or click an item, its chain stays, the rest fades ---------- */
+[data-focus] [data-node], [data-focus] [data-edge] { transition: opacity .15s; }
+[data-focus] [data-node] { cursor: pointer; }
+[data-focus].is-focused [data-node].f-dim { opacity: .18 !important; }
+[data-focus].is-focused [data-edge].f-dim { opacity: .06 !important; }
+[data-focus].is-focused [data-edge].f-on { opacity: 1; }
+[data-focus].is-focused [data-edge].f-on .e-line, [data-focus].is-focused .e-line[data-edge].f-on { stroke-width: 2.4; opacity: 1; }
+[data-focus] [data-node].f-sel { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 6px; }
+[data-focus] [data-node].f-up { --f-ring: var(--up); }
+[data-focus] [data-node].f-down { --f-ring: var(--down); }
+[data-focus] [data-node].f-up, [data-focus] [data-node].f-down { outline: 2px solid var(--f-ring); outline-offset: 2px; border-radius: 6px; }
+[data-focus] svg [data-node].f-sel, [data-focus] svg [data-node].f-up, [data-focus] svg [data-node].f-down { outline: none; }
+/* SVG diagrams: node shapes take class n-box, links take class e-line, so focus can restyle them. */
+.n-box { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+.e-line { fill: none; stroke: var(--muted); stroke-width: 1.4; opacity: .7; }
+/* !important so a snippet's own box colours (often id-scoped) can never hide the focus rings. */
+[data-focus] svg [data-node].f-sel .n-box { stroke: var(--ink) !important; stroke-width: 2.4 !important; }
+[data-focus] svg [data-node].f-up .n-box { stroke: var(--up) !important; stroke-width: 2.2 !important; }
+[data-focus] svg [data-node].f-down .n-box { stroke: var(--down) !important; stroke-width: 2.2 !important; }
+.focus-bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 13px; }
+.focus-bar .lbl { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.focus-bar button { font: inherit; font-size: 13px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.focus-bar button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.focus-bar input[type="search"] { font: inherit; font-size: 13px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); min-width: 0; width: 180px; }
+.focus-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); }
+.focus-legend i { display: inline-block; width: 14px; height: 0; border-top: 3px solid var(--k); margin-right: 6px; vertical-align: 3px; }
+.focus-panel { background: var(--sunk); border-radius: 8px; padding: 12px 14px; font-size: 14px; display: grid; gap: 6px; align-content: start; }
+.focus-panel h4 { margin: 0; font-family: var(--font-display); font-size: 15px; }
+.focus-panel ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+
+<div class="page">
+<header>
+  <span class="eyebrow">{{EYEBROW: topic · date}}</span>
+  <h1>{{THE PAGE'S QUESTION OR POINT}}</h1>
+  <p class="lede">{{TWO LINES: the answer first, with the key numbers in the sentence}}</p>
+</header>
+
+<!-- One button per tab, in reading order. data-tab is a short ASCII slug; it is also the #hash. -->
+<nav class="tablist" role="tablist" aria-label="Sections">
+  <button type="button" role="tab" id="tab-{{slug}}" data-tab="{{slug}}" aria-controls="panel-{{slug}}">{{Tab name}}<small>{{what's inside, 2-4 words}}</small></button>
+</nav>
+
+<!-- One panel per tab. -->
+<div role="tabpanel" id="panel-{{slug}}" data-tab="{{slug}}" aria-labelledby="tab-{{slug}}">
+  <section>
+    <div class="section-head"><h2>{{Section heading}}</h2><p>{{one line}}</p></div>
+    <div class="point"><strong>{{The point, one sentence}}</strong><span>{{why it matters, one sentence}}</span></div>
+    <!-- Paste visuals from the visuals/ folder here: each is a <figure class="viz"> block plus its <script>. -->
+  </section>
+</div>
+</div>
+
+<div class="viz-tip" id="viz-tip" hidden></div>
+
+<script>
+/* Tabs: click or arrow keys switch; the open tab follows the #hash and is remembered per page. */
+(function () {
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var tabs = $$('[role="tab"]'), panels = $$('[role="tabpanel"]');
+  var KEY = 'tabbed-explainer:tab:' + document.title;
+  function show(id, fromHash) {
+    if (!document.getElementById('panel-' + id)) id = tabs[0] && tabs[0].getAttribute('data-tab');
+    tabs.forEach(function (b) { var on = b.getAttribute('data-tab') === id; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; });
+    panels.forEach(function (p) { p.hidden = p.getAttribute('data-tab') !== id; });
+    try { localStorage.setItem(KEY, id); } catch (e) {}
+    if (!fromHash && location.hash !== '#' + id) { try { history.replaceState(null, '', '#' + id); } catch (e) {} }
+    document.dispatchEvent(new CustomEvent('tabshown', { detail: id }));
+  }
+  tabs.forEach(function (b, i) {
+    b.addEventListener('click', function () { show(b.getAttribute('data-tab')); });
+    b.addEventListener('keydown', function (e) {
+      var n = e.key === 'ArrowRight' ? tabs[(i + 1) % tabs.length] : e.key === 'ArrowLeft' ? tabs[(i - 1 + tabs.length) % tabs.length] : null;
+      if (!n) return; e.preventDefault(); show(n.getAttribute('data-tab')); n.focus();
+    });
+  });
+  window.addEventListener('hashchange', function () { show(location.hash.slice(1), true); });
+  var saved = null; try { saved = localStorage.getItem(KEY); } catch (e) {}
+  show(location.hash.slice(1) || saved || (tabs[0] && tabs[0].getAttribute('data-tab')), true);
+  window.showTab = show;
+  /* <a href="#some-id" data-goto="tab-slug">: open that tab, then scroll to the element. */
+  $$('a[data-goto]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault(); show(a.getAttribute('data-goto'));
+      var t = document.getElementById((a.getAttribute('href') || '').slice(1)); if (t) t.scrollIntoView({ block: 'center' });
+    });
+  });
+})();
+
+/* Hover text for any element with data-tip (chart marks, cells, nodes). */
+(function () {
+  var tip = document.getElementById('viz-tip');
+  document.addEventListener('mousemove', function (e) {
+    var t = e.target.closest && e.target.closest('[data-tip]');
+    if (!t) { tip.hidden = true; return; }
+    tip.textContent = t.getAttribute('data-tip'); tip.hidden = false;
+    tip.style.left = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8) + 'px';
+    tip.style.top = (e.clientY + 14) + 'px';
+  });
+  document.addEventListener('scroll', function () { tip.hidden = true; }, true);
+})();
+
+/* Focus. Any container with data-focus, holding items with data-node="id" and links with
+   data-edge="fromId>toId" (from feeds to: an arrow from → to). Optional data-flows="a b" on
+   nodes and edges, flow buttons [data-flow-btn="a"] and a search box [data-focus-find] in the
+   same container, and a [data-focus-panel] that lists the pinned item's links.
+   Hover an item: the items it depends on (upstream) ring in --up, the items that depend on it
+   (downstream) ring in --down, the links on those chains stay solid, everything else fades.
+   With data-focus="direct" only the item's own links count, not whole chains (use it for sequences).
+   Click pins it; click empty space or press Escape to clear. Anywhere on the page,
+   <span data-goto-node="id">id</span> opens the right tab and pins that item. */
+window.wireFocus = function (root) {
+  var $$ = function (s) { return Array.prototype.slice.call(root.querySelectorAll(s)); };
+  var nodes = {}, edges = [];
+  $$('[data-node]').forEach(function (el) { var id = el.getAttribute('data-node'); (nodes[id] = nodes[id] || []).push(el); });
+  $$('[data-edge]').forEach(function (el) { var p = el.getAttribute('data-edge').split('>'); edges.push({ el: el, from: p[0].trim(), to: p[1].trim() }); });
+  var ups = {}, downs = {};
+  Object.keys(nodes).forEach(function (id) { ups[id] = []; downs[id] = []; });
+  edges.forEach(function (e) { if (ups[e.to]) ups[e.to].push(e.from); if (downs[e.from]) downs[e.from].push(e.to); });
+  // data-focus="direct" (sequences, where everyone talks to everyone): keep only the item's own links.
+  var direct = root.getAttribute('data-focus') === 'direct';
+  function closure(id, map) {
+    var seen = {};
+    if (direct) { (map[id] || []).forEach(function (n) { seen[n] = 1; }); return seen; }
+    var st = [id]; while (st.length) { var c = st.pop(); (map[c] || []).forEach(function (n) { if (!seen[n]) { seen[n] = 1; st.push(n); } }); } return seen;
+  }
+  var pinned = null, flow = null, query = '';
+  var panel = root.querySelector('[data-focus-panel]'), panelEmpty = panel ? panel.innerHTML : '';
+  function label(id) { var el = nodes[id] && nodes[id][0]; return (el && (el.getAttribute('data-label') || el.textContent.trim().replace(/\s+/g, ' '))) || id; }
+  function inFlow(el) { return !flow || (' ' + (el.getAttribute('data-flows') || '') + ' ').indexOf(' ' + flow + ' ') >= 0; }
+  function paint(focus) {
+    var up = focus ? closure(focus, ups) : null, down = focus ? closure(focus, downs) : null;
+    var filtering = !!(focus || flow || query);
+    root.classList.toggle('is-focused', filtering);
+    Object.keys(nodes).forEach(function (id) {
+      var match = !query || id.toLowerCase().indexOf(query) >= 0 || label(id).toLowerCase().indexOf(query) >= 0;
+      nodes[id].forEach(function (el) {
+        el.classList.remove('f-sel', 'f-up', 'f-down', 'f-dim');
+        if (focus) el.classList.add(id === focus ? 'f-sel' : up[id] ? 'f-up' : down[id] ? 'f-down' : 'f-dim');
+        else if (!inFlow(el) || !match) el.classList.add('f-dim');
+      });
+    });
+    edges.forEach(function (e) {
+      e.el.classList.remove('f-on', 'f-dim');
+      if (focus) {
+        var onUp = direct ? e.to === focus : (up[e.from] && (up[e.to] || e.to === focus)), onDown = direct ? e.from === focus : (down[e.to] && (down[e.from] || e.from === focus));
+        e.el.classList.add(onUp || onDown ? 'f-on' : 'f-dim');
+      } else if (flow) e.el.classList.add(inFlow(e.el) ? 'f-on' : 'f-dim');
+      else if (query) e.el.classList.add('f-dim');
+    });
+  }
+  function showPanel(id) {
+    if (!panel) return;
+    if (!id) { panel.innerHTML = panelEmpty; return; }
+    var li = function (ids) { return ids.length ? ids.map(function (x) { return '<li><span data-goto-node="' + x + '">' + x + '</span> ' + (label(x) !== x ? label(x) : '') + '</li>'; }).join('') : '<li>nothing</li>'; };
+    panel.innerHTML = '<h4>' + label(id) + '</h4>' +
+      '<div class="label">Needs first (' + ups[id].length + ')</div><ul>' + li(ups[id]) + '</ul>' +
+      '<div class="label">Needed by (' + downs[id].length + ')</div><ul>' + li(downs[id]) + '</ul>';
+  }
+  Object.keys(nodes).forEach(function (id) {
+    nodes[id].forEach(function (el) {
+      if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+      el.addEventListener('mouseenter', function () { if (!pinned) paint(id); });
+      el.addEventListener('mouseleave', function () { if (!pinned) paint(null); });
+      el.addEventListener('focus', function () { if (!pinned) paint(id); });
+      el.addEventListener('click', function (ev) { ev.stopPropagation(); pin(pinned === id ? null : id); });
+      el.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pin(pinned === id ? null : id); } });
+    });
+  });
+  function pin(id) { pinned = id; paint(id); showPanel(id); }
+  root.addEventListener('click', function (ev) { if (!ev.target.closest('[data-node], button, input, [data-focus-panel]')) pin(null); });
+  root.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') pin(null); });
+  Array.prototype.slice.call(root.querySelectorAll('[data-flow-btn]')).forEach(function (b, _, all) {
+    b.addEventListener('click', function () {
+      var f = b.getAttribute('data-flow-btn'); flow = (flow === f || f === 'all') ? null : f;
+      all.forEach(function (x) { x.setAttribute('aria-pressed', String(x.getAttribute('data-flow-btn') === (flow || 'all'))); });
+      pin(null);
+    });
+  });
+  var find = root.querySelector('[data-focus-find]');
+  if (find) find.addEventListener('input', function () { query = find.value.trim().toLowerCase(); pin(null); });
+  root._focusPin = function (id) { if (nodes[id]) pin(id); };
+  paint(null);
+};
+document.addEventListener('click', function (e) {
+  var t = e.target.closest && e.target.closest('[data-goto-node]');
+  if (!t) return;
+  var id = t.getAttribute('data-goto-node');
+  var root = Array.prototype.slice.call(document.querySelectorAll('[data-focus]')).filter(function (r) { return r.querySelector('[data-node="' + id + '"]'); })[0];
+  if (!root) return;
+  var panel = root.closest('[role="tabpanel"]');
+  if (panel && panel.hidden && window.showTab) window.showTab(panel.getAttribute('data-tab'));
+  root._focusPin(id);
+  var n = root.querySelector('[data-node="' + id + '"]'); if (n && n.scrollIntoView) n.scrollIntoView({ block: 'center', inline: 'center' });
+});
+document.addEventListener('DOMContentLoaded', function () { Array.prototype.slice.call(document.querySelectorAll('[data-focus]')).forEach(window.wireFocus); });
+if (document.readyState !== 'loading') Array.prototype.slice.call(document.querySelectorAll('[data-focus]')).forEach(window.wireFocus);
+</script>
