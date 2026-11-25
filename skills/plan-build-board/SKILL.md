@@ -104,9 +104,12 @@ cell. A stack sync link is a commit point too.
 **First use: ask what is missing.** Before step 1, read the file. Ask every key this
 skill reads that is missing, or set to a value not listed above, in **one**
 `AskUserQuestion` call: one question per key, the recommended value first, labelled
-"(Recommended)". Explain them first (*Explain everything, then ask the batch*): what
-each key controls and what each value would do at a real moment of this work ("with
-`commit: ask`, when Job B is verified I ask *Commit job B as `fix(agent): …`?*").
+"(Recommended)". Explain them first, in the sha3bolly style (*Explain everything, then
+ask the batch*): what each key controls, and what each value would do at a moment later
+in the session, such as a commit point or a PR handoff ("with `commit: ask`, when a job is
+verified I ask *Commit this job as `<message>`?* and commit only on a yes"). Nothing has
+been read yet, so the picture and the real-code example wait for the question round, the
+first batch about work that has been read.
 `git` keys another skill already saved are not asked again; with
 nothing missing, nothing is asked. Write the answers the moment the user replies (create
 the file or section if needed, set `updated`), and say in one line: *"Saved to
@@ -308,9 +311,10 @@ Each of these rounds is explained first, the same way.
 
 ### Explain everything, then ask the batch
 
-Every batch of questions comes in **two parts, in this order**: this round, a later round,
-a question held back during implementation, the first-use preferences, and any other
-point where the user decides something. Write **both parts in the sha3bolly style**: load
+Every batch of questions comes in **two parts, in this order**: the explanation, then the
+questions. That holds for this round, a later round, a question held back during
+implementation, the first-use preferences, and any other point where the user decides
+something. Write **both parts in the sha3bolly style**: load
 that skill before writing the first one (*How to explain it in chat*).
 
 1. **The explanation, before any question.** Give the user everything they need to
