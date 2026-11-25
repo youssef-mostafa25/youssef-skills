@@ -42,6 +42,11 @@ approaches, every lane exception, the stack. The board is built from the answers
 **every task on it is ready to implement: the only thing it still needs from the user is
 approval.** A task that still needs an answer is not on the board yet.
 
+**Explain first, then ask.** Whenever the user has a decision to make, everything they
+need to make it is explained first, then the questions come as one batch. Both the
+explanation and the questions are written in the sha3bolly style. See *Explain
+everything, then ask the batch*.
+
 **The rule: nothing is implemented until the user says yes, in words, to that specific
 task** — naming the task, or naming the job or PR that contains it. A thumbs-up on another
 task or job, silence, or your own confidence that the fix is obvious are not approval.
@@ -99,7 +104,10 @@ cell. A stack sync link is a commit point too.
 **First use: ask what is missing.** Before step 1, read the file. Ask every key this
 skill reads that is missing, or set to a value not listed above, in **one**
 `AskUserQuestion` call: one question per key, the recommended value first, labelled
-"(Recommended)". `git` keys another skill already saved are not asked again; with
+"(Recommended)". Explain them first (*Explain everything, then ask the batch*): what
+each key controls and what each value would do at a real moment of this work ("with
+`commit: ask`, when Job B is verified I ask *Commit job B as `fix(agent): …`?*").
+`git` keys another skill already saved are not asked again; with
 nothing missing, nothing is asked. Write the answers the moment the user replies (create
 the file or section if needed, set `updated`), and say in one line: *"Saved to
 `~/.claude/youssef-skills/preferences.md`. Say things like 'commit for me from now on' or
@@ -115,7 +123,8 @@ one line, and apply it from the next step.
 "don't push this one" under `auto` skips that once. Neither changes the file unless the
 user says "from now on" or "always". Being told once is never permission for the next time.
 
-**No preference changes these:** the question round, one proposal per task, lanes, the
+**No preference changes these:** the question round, explaining before every question
+batch, one proposal per task, lanes, the
 board updated in the same turn, verifying before `Fixed`, the branch check, and
 `--no-track` on every branch. This skill never force-pushes; stack rebases go through
 integration-assistant, which reads `force_push`.
@@ -282,10 +291,6 @@ only time anything but approval is asked of the user.
 6. **Anything else** a task would otherwise stop on: a value to use, an owner to ask, a
    behaviour to keep.
 
-One message, in the sha3bolly style, each question with your recommendation so the user
-can answer "go with your picks". `AskUserQuestion` fits only when four questions or fewer
-cover everything. A plain numbered list is otherwise right.
-
 **Ready means** the fix is one approach with no "or", every file it edits is named, its
 lane is cleared, its Legacy is decided, and its verification is named. A task the user
 cannot answer for yet (waiting on another team, a product call) stays off the board; say
@@ -299,6 +304,45 @@ decisions in its Evidence / decision cell ("Legacy: drop (user, 2026-10-29) · l
 **Later tasks get a round too.** A task found after the board exists (a side catch, a
 review comment) gets its questions asked before it is added. An existing board with tasks
 still carrying open questions gets one round for all of them at the next job boundary.
+Each of these rounds is explained first, the same way.
+
+### Explain everything, then ask the batch
+
+Every batch of questions comes in **two parts, in this order**: this round, a later round,
+a question held back during implementation, the first-use preferences, and any other
+point where the user decides something. Write **both parts in the sha3bolly style**: load
+that skill before writing the first one (*How to explain it in chat*).
+
+1. **The explanation, before any question.** Give the user everything they need to
+   decide, so no question sends them back to the code:
+   - **The picture.** What the work is, what you found, and how the pieces connect. Draw a
+     flowchart when more than one function or service is involved.
+   - **Each question's background.** What happens today, shown with a concrete example
+     (real code, a real value, a real sequence). Then what each option would change on
+     that same example, and what is lost or risked with each.
+   - **Every term a question uses, defined here first.**
+2. **The batch.** The questions, numbered and grouped by task. Each one gives its options
+   in plain words, one concrete line per option ("drop it → chats summarised before June
+   show no summary"), then your recommendation and one sentence of why, so the user can
+   answer "go with your picks".
+
+```
+EXPLANATION
+  The picture   Browser --(message)--> Agent --(saves)--> chat_summary row
+  Q1 background Today a chat summarised before June keeps its summary in the old
+                `summary` column (example: chat 4f2… → "Riyadh traffic, 3 charts").
+                Drop it → that chat reloads with no summary. Keep it → one fallback read.
+THE BATCH
+  1. Task 03 · Legacy, the old `summary` column: drop it / keep the fallback.
+     Recommend: keep. 212 chats still have only the old column.
+```
+
+A question with no explanation above it, or one that uses a term or an option the
+explanation did not cover, is not ready to ask: write its explanation first.
+`AskUserQuestion` fits only when four questions or fewer cover everything. Then the
+explanation is the chat text before the call, and each question's description repeats the
+one line of it that question needs, because the dialog can hide what came before it. A
+plain numbered list is otherwise right.
 
 ## Plan scope
 
@@ -342,7 +386,8 @@ PR 1 without stopping" covers PR 1's approved jobs, not PR 2. Even then, work jo
 the board moves per job, each job gets its own job review, and they are handed back in job
 order in one message at the end. A question that surfaces during implementation was
 missed in the round: hold that task at `Approved`, with any task that depends on it, and
-the rest goes on; the final message asks it and lists what was held. A failed branch
+the rest goes on; the final message explains it, then asks it (*Explain everything, then
+ask the batch*), and lists what was held. A failed branch
 check stops the whole run.
 
 **Task scope inside a job.** The job header's order still holds. When a task closes out its
@@ -762,7 +807,9 @@ The board is a **status board**. The reasoning goes in chat, written for a junio
 4. **Keep it small.** Short numbered steps, never one long block. Go deeper only when asked.
 
 The `sha3bolly` skill ships alongside this one and is the canonical
-statement of this style — load it before writing the first proposal and follow it.
+statement of this style. Load it before writing the first explanation, question batch or
+proposal, and follow it. It applies to the questions themselves too, not only to the
+explanation before them.
 
 ## Status lifecycle
 
@@ -931,6 +978,9 @@ the link once, in one line.
 - A task on the board that still needs an answer from the user, or a proposal that asks
   one. Approval is the only thing a proposal asks for.
 - Asking a question at Step 5, or at a job's start, that the round could have asked.
+- A question batch with no explanation before it, or a question using a term or an option
+  the explanation did not cover. Either one, or the questions themselves, not written in
+  the sha3bolly style.
 - Presenting a whole job when the user said "next task", or one job when they said "next
   PR".
 - Implementing a second job (or a second task, in task scope) before the user has had the

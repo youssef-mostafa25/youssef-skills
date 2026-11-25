@@ -19,7 +19,9 @@ Say things like:
 
 1. **One round of questions.** Which tasks to include, what to do with old code paths,
    approach choices, which folders Claude may touch (see *Lanes* below), and whether to split into PRs. It's
-   all asked at once, before anything is planned.
+   all asked at once, before anything is planned. Every time you have a decision to make,
+   Claude first explains everything you need for it, then asks the questions together,
+   both in plain words with real examples (the sha3bolly style).
 2. **A link to the board.** Tabs for Jobs, PRs, the work queue, every task, and Issues
    when the work comes from tracked issues.
 3. **Proposals.** Each task gets the same seven parts: the issue, why it matters, the
